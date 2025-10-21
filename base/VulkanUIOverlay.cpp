@@ -13,17 +13,6 @@ namespace vks
 {
 	UIOverlay::UIOverlay()
 	{
-#if defined(__ANDROID__)		
-		if (vks::android::screenDensity >= ACONFIGURATION_DENSITY_XXHIGH) {
-			scale = 3.5f;
-		}
-		else if (vks::android::screenDensity >= ACONFIGURATION_DENSITY_XHIGH) {
-			scale = 2.5f;
-		}
-		else if (vks::android::screenDensity >= ACONFIGURATION_DENSITY_HIGH) {
-			scale = 2.0f;
-		};
-#endif
 		// Init ImGui
 		ImGui::CreateContext();
 		// Color scheme
@@ -65,22 +54,8 @@ namespace vks
 		// Create font texture
 		unsigned char* fontData;
 		int texWidth, texHeight;
-#if defined(__ANDROID__)
-		float scale = (float)vks::android::screenDensity / (float)ACONFIGURATION_DENSITY_MEDIUM;
-		AAsset* asset = AAssetManager_open(androidApp->activity->assetManager, "Roboto-Medium.ttf", AASSET_MODE_STREAMING);
-		if (asset) {
-			size_t size = AAsset_getLength(asset);
-			assert(size > 0);
-			char *fontAsset = new char[size];
-			AAsset_read(asset, fontAsset, size);
-			AAsset_close(asset);
-			io.Fonts->AddFontFromMemoryTTF(fontAsset, size, 14.0f * scale);
-			delete[] fontAsset;
-		}
-#else
 		const std::string filename = getAssetPath() + "Roboto-Medium.ttf";
 		io.Fonts->AddFontFromFileTTF(filename.c_str(), 16.0f * scale);
-#endif
 		io.Fonts->GetTexDataAsRGBA32(&fontData, &texWidth, &texHeight);
 		VkDeviceSize uploadSize = texWidth*texHeight * 4 * sizeof(char);
 
@@ -378,13 +353,7 @@ namespace vks
 				vkCmdDrawIndexed(commandBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
 				indexOffset += pcmd->ElemCount;
 			}
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT)) && TARGET_OS_SIMULATOR
-			// Apple Device Simulator does not support vkCmdDrawIndexed() with vertexOffset > 0, so rebind vertex buffer instead
-			offsets[0] += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffers[currentBuffer].vertexBuffer.buffer, offsets);
-#else
 			vertexOffset += cmd_list->VtxBuffer.Size;
-#endif
 		}
 	}
 

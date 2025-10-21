@@ -36,3 +36,6 @@ Makefile
 *.dir/
 *.obj
 *.o
+
+# imgui
+imgui.ini

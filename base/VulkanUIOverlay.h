@@ -24,14 +24,6 @@
 
 #include "../external/imgui/imgui.h"
 
-#if defined(__ANDROID__)
-#include "VulkanAndroid.h"
-#endif
-
-#if defined(__APPLE__)
-#include <TargetConditionals.h>
-#endif
-
 namespace vks
 {
 	class UIOverlay
