@@ -35,16 +35,6 @@ namespace vks
 		void run(std::function<void()> renderFunc, VkPhysicalDeviceProperties deviceProps) {
 			active = true;
 			this->deviceProps = deviceProps;
-#if defined(_WIN32)
-			bool consoleAttached = AttachConsole(ATTACH_PARENT_PROCESS);
-			if (!consoleAttached) {
-				consoleAttached = AttachConsole(GetCurrentProcessId());
-			}
-			if (consoleAttached) {
-				freopen_s(&stream, "CONOUT$", "w+", stdout);
-				freopen_s(&stream, "CONOUT$", "w+", stderr);
-			}
-#endif
 			// Warm up phase to get more stable frame rates
 			{
 				double tMeasured = 0.0;
@@ -99,9 +89,6 @@ namespace vks
 				}
 
 				result.flush();
-#if defined(_WIN32)
-				FreeConsole();
-#endif
 			}
 		}
 	};

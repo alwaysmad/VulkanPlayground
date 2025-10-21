@@ -18,7 +18,6 @@
 # Redistribution and use is allowed according to the terms of the BSD license.
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
-IF (NOT WIN32)
   IF (WAYLAND_INCLUDE_DIR AND WAYLAND_LIBRARIES)
     # In the cache already
     SET(WAYLAND_FIND_QUIETLY TRUE)
@@ -62,5 +61,3 @@ IF (NOT WIN32)
         WAYLAND_EGL_INCLUDE_DIR     WAYLAND_EGL_LIBRARIES
         WAYLAND_CURSOR_INCLUDE_DIR  WAYLAND_CURSOR_LIBRARIES
   )
-
-ENDIF ()

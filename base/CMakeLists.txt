@@ -15,8 +15,4 @@ set(KTX_SOURCES
     ${KTX_DIR}/lib/vkloader.c)
 
 add_library(base STATIC ${BASE_SRC} ${KTX_SOURCES})
-if(WIN32)
-    target_link_libraries(base ${Vulkan_LIBRARY} ${WINLIBS})
- else(WIN32)
-    target_link_libraries(base ${Vulkan_LIBRARY} ${XCB_LIBRARIES} ${WAYLAND_CLIENT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-endif(WIN32)
+target_link_libraries(base ${Vulkan_LIBRARY} ${XCB_LIBRARIES} ${WAYLAND_CLIENT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})

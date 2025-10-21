@@ -18,14 +18,7 @@
 #include <stdio.h>
 #include <vector>
 #include <sstream>
-#ifdef _WIN32
-#include <windows.h>
-#include <fcntl.h>
-#include <io.h>
-#endif
-#ifdef __ANDROID__
-#include "VulkanAndroid.h"
-#endif
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>

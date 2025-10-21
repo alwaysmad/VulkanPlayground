@@ -31,35 +31,16 @@ namespace vks
 
 			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
 				prefix = "VERBOSE: ";
-#if defined(_WIN32)
-				if (!logToFile) {
-					prefix = "\033[32m" + prefix + "\033[0m";
-				}
-#endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
 				prefix = "INFO: ";
-#if defined(_WIN32)
-				if (!logToFile) {
-					prefix = "\033[36m" + prefix + "\033[0m";
-				}
-#endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 				prefix = "WARNING: ";
-#if defined(_WIN32)
-				if (!logToFile) {
-					prefix = "\033[33m" + prefix + "\033[0m";
-				}
-#endif
 			}
 			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 				prefix = "ERROR: ";
-#if defined(_WIN32)
-				if (!logToFile) {
-					prefix = "\033[31m" + prefix + "\033[0m";
-				}
-#endif
+
 			}
 
 
@@ -72,13 +53,6 @@ namespace vks
 				debugMessage << prefix << "[" << pCallbackData->messageIdNumber << "] : " << pCallbackData->pMessage;
 			}
 
-#if defined(__ANDROID__)
-			if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-				LOGE("%s", debugMessage.str().c_str());
-			} else {
-				LOGD("%s", debugMessage.str().c_str());
-			}
-#else
 			if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 				std::cerr << debugMessage.str() << "\n\n";
 			} else {
@@ -88,7 +62,6 @@ namespace vks
 				log(debugMessage.str());
 			}
 			fflush(stdout);
-#endif
 
 
 			// The return value of this callback controls whether the Vulkan call that caused the validation message will be aborted or not

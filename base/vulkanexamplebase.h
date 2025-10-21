@@ -8,19 +8,7 @@
 
 #pragma once
 
-#ifdef _WIN32
-#pragma comment(linker, "/subsystem:windows")
-#include <windows.h>
-#include <fcntl.h>
-#include <io.h>
-#include <ShellScalingAPI.h>
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-#include <android/native_activity.h>
-#include <android/asset_manager.h>
-#include <android_native_app_glue.h>
-#include <sys/system_properties.h>
-#include "VulkanAndroid.h"
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 #include <directfb.h>
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #include <wayland-client.h>
@@ -29,8 +17,6 @@
 //
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 #include <xcb/xcb.h>
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))
-#include <TargetConditionals.h>
 #endif
 
 #include <stdio.h>
@@ -224,28 +210,7 @@ public:
 	} depthStencil{};
 
 	// OS specific
-#if defined(_WIN32)
-	HWND window;
-	HINSTANCE windowInstance;
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-	// true if application has focused, false if moved to background
-	bool focused = false;
-	struct TouchPos {
-		int32_t x;
-		int32_t y;
-	} touchPos{};
-	bool touchDown = false;
-	double touchTimer = 0.0;
-	int64_t lastTapTime = 0;
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))
-	void* view;
-#if defined(VK_USE_PLATFORM_METAL_EXT)
-	CAMetalLayer* metalLayer;
-#endif
-#if defined(VK_EXAMPLE_XCODE_GENERATED)
-	bool quit = false;
-#endif
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 	bool quit = false;
 	IDirectFB *dfb = nullptr;
 	IDirectFBDisplayLayer *layer = nullptr;
@@ -276,11 +241,6 @@ public:
 	xcb_intern_atom_reply_t *atom_wm_delete_window;
 #elif defined(VK_USE_PLATFORM_HEADLESS_EXT)
 	bool quit = false;
-#elif defined(VK_USE_PLATFORM_SCREEN_QNX)
-	screen_context_t screen_context = nullptr;
-	screen_window_t screen_window = nullptr;
-	screen_event_t screen_event = nullptr;
-	bool quit = false;
 #endif
 
 	/** @brief Default base class constructor */
@@ -289,21 +249,7 @@ public:
 	/** @brief Setup the vulkan instance, enable required extensions and connect to the physical device (GPU) */
 	bool initVulkan();
 
-#if defined(_WIN32)
-	void setupConsole(std::string title);
-	void setupDPIAwareness();
-	HWND setupWindow(HINSTANCE hinstance, WNDPROC wndproc);
-	void handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-	static int32_t handleAppInput(struct android_app* app, AInputEvent* event);
-	static void handleAppCommand(android_app* app, int32_t cmd);
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))
-	void* setupWindow(void* view);
-	void displayLinkOutputCb();
-	void mouseDragged(float x, float y);
-	void windowWillResize(float x, float y);
-	void windowDidResize();
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 	IDirectFBSurface *setupWindow();
 	void handleEvent(const DFBWindowEvent *event);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
@@ -336,11 +282,6 @@ public:
 	xcb_window_t setupWindow();
 	void initxcbConnection();
 	void handleEvent(const xcb_generic_event_t *event);
-#elif defined(VK_USE_PLATFORM_SCREEN_QNX)
-	void setupWindow();
-	void handleEvent();
-#else
-	void setupWindow();
 #endif
 	/** @brief (Virtual) Creates the application wide Vulkan instance */
 	virtual VkResult createInstance();
@@ -384,10 +325,6 @@ public:
 
 	/** @brief (Virtual) Called when the UI overlay is updating, can be used to add custom elements to the overlay */
 	virtual void OnUpdateUIOverlay(vks::UIOverlay *overlay);
-
-#if defined(_WIN32)
-	virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-#endif
 };
 
 #include "Entrypoints.h"
