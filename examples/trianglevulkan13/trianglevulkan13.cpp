@@ -23,7 +23,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <vulkan/vulkan.h>
 #include "vulkanexamplebase.h"
 
 // We want to keep GPU and CPU busy. To do that we may start building a new command buffer while the previous one is still being executed
@@ -454,17 +453,6 @@ public:
 		size_t shaderSize;
 		char* shaderCode{ nullptr };
 
-#if defined(__ANDROID__)
-		// Load shader from compressed asset
-		AAsset* asset = AAssetManager_open(androidApp->activity->assetManager, filename.c_str(), AASSET_MODE_STREAMING);
-		assert(asset);
-		shaderSize = AAsset_getLength(asset);
-		assert(shaderSize > 0);
-
-		shaderCode = new char[shaderSize];
-		AAsset_read(asset, shaderCode, shaderSize);
-		AAsset_close(asset);
-#else
 		std::ifstream is(filename, std::ios::binary | std::ios::in | std::ios::ate);
 
 		if (is.is_open()) {
@@ -476,7 +464,7 @@ public:
 			is.close();
 			assert(shaderSize > 0);
 		}
-#endif
+
 		if (shaderCode) {
 			// Create a new shader module that will be used for pipeline creation
 			VkShaderModuleCreateInfo shaderModuleCI{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -827,44 +815,7 @@ public:
 // OS specific main entry points
 // Most of the code base is shared for the different supported operating systems, but stuff like message handling differs
 
-#if defined(_WIN32)
-// Windows entry point
-VulkanExample *vulkanExample;
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	if (vulkanExample != NULL)
-	{
-		vulkanExample->handleMessages(hWnd, uMsg, wParam, lParam);
-	}
-	return (DefWindowProc(hWnd, uMsg, wParam, lParam));
-}
-int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_  HINSTANCE hPrevInstance, _In_ LPSTR, _In_ int)
-{
-	for (size_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
-	vulkanExample = new VulkanExample();
-	vulkanExample->initVulkan();
-	vulkanExample->setupWindow(hInstance, WndProc);
-	vulkanExample->prepare();
-	vulkanExample->renderLoop();
-	delete(vulkanExample);
-	return 0;
-}
-
-#elif defined(__ANDROID__)
-// Android entry point
-VulkanExample *vulkanExample;
-void android_main(android_app* state)
-{
-	vulkanExample = new VulkanExample();
-	state->userData = vulkanExample;
-	state->onAppCmd = VulkanExample::handleAppCommand;
-	state->onInputEvent = VulkanExample::handleAppInput;
-	androidApp = state;
-	vulkanExample->renderLoop();
-	delete(vulkanExample);
-}
-#elif defined(_DIRECT2DISPLAY)
-
+#if defined(_DIRECT2DISPLAY)
 // Linux entry point with direct to display wsi
 // Direct to Displays (D2D) is used on embedded platforms
 VulkanExample *vulkanExample;
@@ -942,22 +893,4 @@ int main(const int argc, const char *argv[])
 	delete(vulkanExample);
 	return 0;
 }
-#elif (defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT)) && defined(VK_EXAMPLE_XCODE_GENERATED)
-VulkanExample *vulkanExample;
-int main(const int argc, const char *argv[])
-{
-	@autoreleasepool
-	{
-		for (size_t i = 0; i < argc; i++) { VulkanExample::args.push_back(argv[i]); };
-		vulkanExample = new VulkanExample();
-		vulkanExample->initVulkan();
-		vulkanExample->setupWindow(nullptr);
-		vulkanExample->prepare();
-		vulkanExample->renderLoop();
-		delete(vulkanExample);
-	}
-	return 0;
-}
-#elif defined(VK_USE_PLATFORM_SCREEN_QNX)
-VULKAN_EXAMPLE_MAIN()
 #endif
