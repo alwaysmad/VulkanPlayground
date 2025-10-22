@@ -8,27 +8,7 @@
  * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
  */
 
-#if defined(_DIRECT2DISPLAY)
-/*
- * Direct-to-display
- */
-#define VULKAN_EXAMPLE_MAIN()																		\
-VulkanExample *vulkanExample;																		\
-static void handleEvent()                                											\
-{																									\
-}																									\
-int main(const int argc, const char *argv[])													    \
-{																									\
-	for (size_t i = 0; i < argc; i++) { VulkanExample::args.push_back(argv[i]); };  				\
-	vulkanExample = new VulkanExample();															\
-	vulkanExample->initVulkan();																	\
-	vulkanExample->prepare();																		\
-	vulkanExample->renderLoop();																	\
-	delete(vulkanExample);																			\
-	return 0;																						\
-}
-
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 /*
  * Direct FB
  */
@@ -95,5 +75,4 @@ int main(const int argc, const char *argv[])													    \
 	delete(vulkanExample);																			\
 	return 0;																						\
 }
-
 #endif

@@ -13,8 +13,6 @@
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 #include <wayland-client.h>
 #include "xdg-shell-client-protocol.h"
-#elif defined(_DIRECT2DISPLAY)
-//
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 #include <xcb/xcb.h>
 #endif
@@ -231,8 +229,6 @@ public:
 	bool quit = false;
 	bool configured = false;
 
-#elif defined(_DIRECT2DISPLAY)
-	bool quit = false;
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	bool quit = false;
 	xcb_connection_t *connection;
@@ -276,8 +272,6 @@ public:
 	void keyboardKey(struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
 	static void keyboardModifiersCb(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group);
 
-#elif defined(_DIRECT2DISPLAY)
-//
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	xcb_window_t setupWindow();
 	void initxcbConnection();

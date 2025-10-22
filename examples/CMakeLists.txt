@@ -79,6 +79,7 @@ endfunction(buildExamples)
 set(EXAMPLES
 	computenbody
 	trianglevulkan13
+	test
 )
 
 buildExamples()

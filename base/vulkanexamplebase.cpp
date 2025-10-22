@@ -15,9 +15,7 @@ VkResult VulkanExampleBase::createInstance()
 	std::vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 
 	// Enable surface extensions depending on os
-#if defined(_DIRECT2DISPLAY)
-	instanceExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 	instanceExtensions.push_back(VK_EXT_DIRECTFB_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	instanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
@@ -279,35 +277,7 @@ void VulkanExampleBase::renderLoop()
 	destHeight = height;
 	lastTimestamp = std::chrono::high_resolution_clock::now();
 	tPrevEnd = lastTimestamp;
-#if defined(_DIRECT2DISPLAY)
-	while (!quit)
-	{
-		auto tStart = std::chrono::high_resolution_clock::now();
-		render();
-		frameCounter++;
-		auto tEnd = std::chrono::high_resolution_clock::now();
-		auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
-		frameTimer = tDiff / 1000.0f;
-		camera.update(frameTimer);
-		// Convert to clamped timer value
-		if (!paused)
-		{
-			timer += timerSpeed * frameTimer;
-			if (timer > 1.0)
-			{
-				timer -= 1.0f;
-			}
-		}
-		float fpsTimer = std::chrono::duration<double, std::milli>(tEnd - lastTimestamp).count();
-		if (fpsTimer > 1000.0f)
-		{
-			lastFPS = (float)frameCounter * (1000.0f / fpsTimer);
-			frameCounter = 0;
-			lastTimestamp = tEnd;
-		}
-		updateOverlay();
-	}
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 	while (!quit)
 	{
 		auto tStart = std::chrono::high_resolution_clock::now();
@@ -657,9 +627,7 @@ VulkanExampleBase::VulkanExampleBase()
 	settings.validation = true;
 #endif
 
-#if defined(_DIRECT2DISPLAY)
-	//
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	initWaylandConnection();
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	initxcbConnection();
@@ -705,9 +673,7 @@ VulkanExampleBase::~VulkanExampleBase()
 		vks::debug::freeDebugCallback(instance);
 	}
 	vkDestroyInstance(instance, nullptr);
-#if defined(_DIRECT2DISPLAY)
-	//
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 	if (event_buffer)
 		event_buffer->Release(event_buffer);
 	if (surface)
@@ -852,9 +818,7 @@ bool VulkanExampleBase::initVulkan()
 	return true;
 }
 
-#if defined(_DIRECT2DISPLAY)
-//
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
+#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
 IDirectFBSurface *VulkanExampleBase::setupWindow()
 {
 	DFBResult ret;
@@ -1841,7 +1805,7 @@ void VulkanExampleBase::createSurface()
 	swapChain.initSurface(display, surface);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	swapChain.initSurface(connection, window);
-#elif (defined(_DIRECT2DISPLAY) || defined(VK_USE_PLATFORM_HEADLESS_EXT))
+#elif defined(VK_USE_PLATFORM_HEADLESS_EXT)
 	swapChain.initSurface(width, height);
 #endif
 }

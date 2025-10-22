@@ -19,14 +19,6 @@
 #include <vulkan/vulkan.h>
 #include "VulkanTools.h"
 
-#ifdef __ANDROID__
-#include "VulkanAndroid.h"
-#endif
-
-#ifdef __APPLE__
-#include <sys/utsname.h>
-#endif
-
 class VulkanSwapChain
 {
 private: 
@@ -49,10 +41,8 @@ public:
 	void initSurface(wl_display* display, wl_surface* window);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	void initSurface(xcb_connection_t* connection, xcb_window_t window);
-#elif (defined(_DIRECT2DISPLAY) || defined(VK_USE_PLATFORM_HEADLESS_EXT))
+#elif defined(VK_USE_PLATFORM_HEADLESS_EXT)
 	void initSurface(uint32_t width, uint32_t height);
-#elif defined(_DIRECT2DISPLAY)
-	void createDirect2DisplaySurface(uint32_t width, uint32_t height);
 #endif
 
 	/* Set the Vulkan objects required for swapchain creation and management, must be called before swapchain creation */
