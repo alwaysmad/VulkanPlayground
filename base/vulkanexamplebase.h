@@ -167,12 +167,6 @@ public:
 		bool overlay = true;
 	} settings;
 
-	/** @brief State of gamepad input (only used on Android) */
-	struct {
-		glm::vec2 axisLeft = glm::vec2(0.0f);
-		glm::vec2 axisRight = glm::vec2(0.0f);
-	} gamePadState;
-
 	/** @brief State of mouse/touch input */
 	struct {
 		struct {
