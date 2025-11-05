@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Set the base directory for FetchContent BEFORE project()
-# This ensures it's set before any other paths are initialized.
-# We set it as a CACHE variable to make it "sticky".
 set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps CACHE PATH "Base directory for FetchContent")
 message(STATUS "Setting path for dependencies to ${FETCHCONTENT_BASE_DIR}")
 
