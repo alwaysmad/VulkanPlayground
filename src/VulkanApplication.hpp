@@ -6,6 +6,8 @@
 
 #include <vulkan/vulkan_raii.hpp> // For everything Vulkan
 #include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
+#include <string>
+#include "DebugOutput.hpp"
 
 class VulkanApplication
 {
@@ -19,22 +21,17 @@ private:
 	 */
 	vk::raii::Context context;
 	/*
+	 * Application name
+	 */
+	const std::string appName;
+	/*
 	 * Required for instance thoughout the program
 	 */
-	static inline constexpr vk::ApplicationInfo appInfo {
-		.pApplicationName   = "SimpleVK",
-		.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 ),
-		.pEngineName        = "No Engine",
-		.engineVersion      = VK_MAKE_VERSION( 1, 0, 0 ),
-		.apiVersion         = VK_API_VERSION_1_4
-	};
+	const vk::ApplicationInfo appInfo;
 	/*
 	 * Struct to pass info to instance constructor
 	 */
-	static inline constexpr vk::InstanceCreateInfo createInfo {
-		.sType            = vk::StructureType::eInstanceCreateInfo,
-		.pApplicationInfo = &appInfo
-	};
+	const vk::InstanceCreateInfo createInfo;
 	/*
 	 * Vulkan instance
 	 * crucial for everything vulkan
@@ -45,7 +42,11 @@ public:
 	 * Constructor
 	 * handles all initializations
 	 */
-	VulkanApplication();
+	explicit VulkanApplication(const std::string&);
+	/*
+	 * Destructor
+	 */
+	~VulkanApplication();
 	/*
 	 * Run the actual programm
 	 */

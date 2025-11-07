@@ -1,15 +1,17 @@
 #include "VulkanApplication.hpp"
-#include "DebugOutput.hpp"
+#include "DebugOutput.hpp" // for console colors
 #include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
 
-int main( int /*argc*/, char ** /*argv*/ )
+constexpr auto AppName = "SimpleVK";
+
+int main( int /*argc*/, char** /*argv*/ )
 {
 	try
 	{
 		// Create an VulkanApplication instance 
 		// execute run() method 
 		// then destroy instance as it's an anonymous object
-		return VulkanApplication().run();
+		return VulkanApplication(AppName).run();
 	}
 	// The exception type for vulkan_raii.hpp is vk::SystemError
 	catch ( const vk::SystemError& e )
