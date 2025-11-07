@@ -1,4 +1,8 @@
 #pragma once
+
+// enable debug output
+#define ENABLE_DEBUG_LOGGING
+
 #include <iostream>
 
 constexpr auto DBG_COLOR_RED    = "\033[1;31m";

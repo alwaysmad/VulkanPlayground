@@ -1,8 +1,6 @@
-// enable debug output
-#define ENABLE_DEBUG_LOGGING
-
 #include "VulkanApplication.hpp"
 #include "DebugOutput.hpp"
+#include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
 
 int main( int /*argc*/, char ** /*argv*/ )
 {

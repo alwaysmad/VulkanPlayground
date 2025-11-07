@@ -5,7 +5,6 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 
 #include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-#include "DebugOutput.hpp"
 #include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
 
 class VulkanApplication
@@ -46,18 +45,9 @@ public:
 	 * Constructor
 	 * handles all initializations
 	 */
-	VulkanApplication() :
-		context(),
-		instance(context, createInfo)
-	{
-		LOG_DEBUG("VulkanApplication created successfully");
-	}
+	VulkanApplication();
 	/*
 	 * Run the actual programm
 	 */
-	int run()
-	{
-		LOG_DEBUG("VulkanApplication instance started run()");
-		return EXIT_SUCCESS;
-	}
+	int run();
 };
