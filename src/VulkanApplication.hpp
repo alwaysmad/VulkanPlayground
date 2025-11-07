@@ -21,18 +21,6 @@ private:
 	 */
 	vk::raii::Context context;
 	/*
-	 * Application name
-	 */
-	const std::string appName;
-	/*
-	 * Required for instance thoughout the program
-	 */
-	const vk::ApplicationInfo appInfo;
-	/*
-	 * Struct to pass info to instance constructor
-	 */
-	const vk::InstanceCreateInfo createInfo;
-	/*
 	 * Vulkan instance
 	 * crucial for everything vulkan
 	 */

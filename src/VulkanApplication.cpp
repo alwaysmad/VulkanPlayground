@@ -2,24 +2,24 @@
 
 VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
+	instance(nullptr)
+{
+	LOG_DEBUG("Application name is " << AppName);
 
-	appName(AppName),
-
-	appInfo {
-		.pApplicationName = appName.c_str(),
+	vk::ApplicationInfo appInfo {
+		.pApplicationName = AppName.c_str(),
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 		.pEngineName = "No Engine",
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 		.apiVersion = vk::ApiVersion14
-	},
+	};
+	
+	vk::InstanceCreateInfo createInfo {
+		.pApplicationInfo = &appInfo
+	};
 
-	createInfo {
-		.pApplicationInfo = & appInfo
-	},
+	instance = vk::raii::Instance(context, createInfo);
 
-	instance(context, createInfo)
-{
-	LOG_DEBUG("Application name is " << appName);
 	LOG_DEBUG("VulkanApplication instance created successfully");
 }
 
