@@ -2,12 +2,13 @@
 
 VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
+	appName(AppName),
 	instance(nullptr)
 {
-	LOG_DEBUG("Application name is " << AppName);
+	LOG_DEBUG("Application name is " << appName);
 
 	vk::ApplicationInfo appInfo {
-		.pApplicationName = AppName.c_str(),
+		.pApplicationName = appName.c_str(),
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 		.pEngineName = "No Engine",
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),

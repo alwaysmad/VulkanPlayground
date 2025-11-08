@@ -21,6 +21,10 @@ private:
 	 */
 	vk::raii::Context context;
 	/*
+	 * Application name
+	 */
+	const std::string appName;
+	/*
 	 * Vulkan instance
 	 * crucial for everything vulkan
 	 */

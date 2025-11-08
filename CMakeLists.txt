@@ -43,6 +43,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # --- Find Vulkan SDK ---
 find_package(Vulkan REQUIRED)
+find_package(glfw3 3.4 REQUIRED)
 
 # --- Automatically determine vulkan.hpp tag ---
 set(VULKAN_HPP_GIT_TAG "v${Vulkan_VERSION}")
