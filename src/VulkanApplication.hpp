@@ -1,12 +1,18 @@
 #pragma once
 
+#include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
+#include <string> // For C++ strings
+#include <algorithm> // For std::ranges
+
 // Remove vulkan.hpp struct constructors 
 // in favor of explicit designated initialization
 #define VULKAN_HPP_NO_CONSTRUCTORS
 
 #include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-#include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
-#include <string>
+
+#define GLFW_INCLUDE_VULKAN // REQUIRED only for GLFW CreateWindowSurface.
+#include <GLFW/glfw3.h>
+
 #include "DebugOutput.hpp"
 
 class VulkanApplication

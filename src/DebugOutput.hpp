@@ -13,7 +13,7 @@ constexpr auto DBG_COLOR_RESET  = "\033[0m";
 	#define LOG_DEBUG(...) do { \
 		std::cout \
 			<< DBG_COLOR_WHITE \
-			<< "[DEBUG] " \
+			/* << "[DEBUG] " */ \
 			<< __VA_ARGS__ \
 			<< DBG_COLOR_RESET \
 			<< std::endl; \
