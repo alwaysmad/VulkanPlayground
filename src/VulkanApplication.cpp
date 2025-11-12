@@ -1,5 +1,21 @@
 #include "VulkanApplication.hpp"
 
+inline static const char* findMissingItem(const std::vector<const char*>& required,
+                                   const std::vector<const char*>& available)
+{
+	for (const char* requiredName : required)
+	{
+		const bool found = std::ranges::any_of( available,
+			[requiredName] (const char* availableName)
+				{return strcmp(requiredName, availableName) == 0;}
+		);
+
+		// return missing name
+		if (!found) return requiredName;
+	}
+	return nullptr; // All items were found
+}
+
 VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
 	appName(AppName),
@@ -7,6 +23,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 {
 	LOG_DEBUG("Application name is " << appName);
 
+	// Create temporary AppInfo struct
 	const vk::ApplicationInfo appInfo {
 		.pApplicationName = appName.c_str(),
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -14,81 +31,56 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 		.apiVersion = vk::ApiVersion14
 	};
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Extensions
 	////////////////////////////////////////////////////////////////////////////////
-	// Get the required instance extensions from GLFW.
-        uint32_t glfwExtensionCount = 0;
-        auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	std::vector<const char*> requiredExtensions = getRequiredExtensions();
+	auto availableExtensionProps = context.enumerateInstanceExtensionProperties();
 
-	std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-	if (enableValidationLayers)
-	{
-		extensions.push_back(vk::EXTDebugUtilsExtensionName );
-	}
+	std::vector<const char*> availableExtensionNames;
+	availableExtensionNames.reserve(availableExtensionProps.size());
+	for (const auto& prop : availableExtensionProps)
+		availableExtensionNames.push_back(prop.extensionName);
 
-	// List glfw required extemtions
-	LOG_DEBUG("Required extentions (" << extensions.size() << ") :");
-	for (const auto& i : extensions)
-	{
-		LOG_DEBUG("\t" << i);
-	}
+	LOG_DEBUG("Available Vulkan extensions (" << availableExtensionNames.size() << ") :");
+	for (const auto& name : availableExtensionNames) { LOG_DEBUG("\t" << name); }
+	
+	LOG_DEBUG("Required extensions (" << requiredExtensions.size() << ") :");
+	for (const auto& name : requiredExtensions) { LOG_DEBUG("\t" << name); }
 
-	// Check if the required GLFW extensions are supported by the Vulkan implementation.
-        auto extensionProperties = context.enumerateInstanceExtensionProperties();
-	// List available extentions
-	LOG_DEBUG("Available Vulkan extensions (" << extensionProperties.size() << ") :");
-	for (const auto& i : extensionProperties)
-	{
-		LOG_DEBUG("\t" << i.extensionName);
-	}
-        for (uint32_t i = 0; i < glfwExtensionCount; ++i)
-        {
-            if (std::ranges::none_of(extensionProperties,
-                                     [glfwExtension = glfwExtensions[i]](auto const& extensionProperty)
-                                     { return strcmp(extensionProperty.extensionName, glfwExtension) == 0; }))
-            {
-                throw std::runtime_error("Required GLFW extension not supported: " + std::string(glfwExtensions[i]));
-            }
-        }
+	if (const char* missingExt = findMissingItem(requiredExtensions, availableExtensionNames))
+		{ throw std::runtime_error("Required extension not supported: " + std::string(missingExt)); }
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Layers
 	////////////////////////////////////////////////////////////////////////////////
-	// Get the required layers
-	std::vector<char const*> requiredLayers;
-	if (enableValidationLayers)
-	{
-		requiredLayers.assign(validationLayers.begin(), validationLayers.end());
-	}
+	std::vector<const char*> requiredLayers = getRequiredLayers();
+	auto availableLayerProps = context.enumerateInstanceLayerProperties();
+
+	std::vector<const char*> availableLayerNames;
+	availableLayerNames.reserve(availableLayerProps.size());
+	for (const auto& prop : availableLayerProps)
+		availableLayerNames.push_back(prop.layerName);
+	
+	LOG_DEBUG("Available layers (" << availableLayerNames.size() << ") :");
+	for (const auto& name : availableLayerNames) { LOG_DEBUG("\t" << name); }
+
 	LOG_DEBUG("Required layers (" << requiredLayers.size() << ") :");
-	for (const auto& i : requiredLayers)
-	{
-		LOG_DEBUG("\t" << i);
-	}
-	// Check if the required layers are supported by the Vulkan implementation.
-	auto layerProperties = context.enumerateInstanceLayerProperties();
-	LOG_DEBUG("Available layers (" << layerProperties.size() << ") :");
-	for (const auto& i : layerProperties)
-	{
-		LOG_DEBUG("\t" << i.layerName);
-	}
-	if (std::ranges::any_of(requiredLayers, [&layerProperties](auto const& requiredLayer) {
-		return std::ranges::none_of(layerProperties,
-				[requiredLayer](auto const& layerProperty)
-				{ return strcmp(layerProperty.layerName, requiredLayer) == 0; });
-	}))
-	{
-		throw std::runtime_error("One or more required layers are not supported!");
-	}
+	for (const auto& name : requiredLayers) { LOG_DEBUG("\t" << name); }
+
+	if (const char* missingLayer = findMissingItem(requiredLayers, availableLayerNames))
+		{ throw std::runtime_error("Required layer not supported: " + std::string(missingLayer)); }
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Creating Instance
 	////////////////////////////////////////////////////////////////////////////////
-	vk::InstanceCreateInfo createInfo {
+	const vk::InstanceCreateInfo createInfo {
 		.pApplicationInfo = &appInfo,
 		.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size()),
 		.ppEnabledLayerNames = requiredLayers.data(),
-		.enabledExtensionCount = glfwExtensionCount,
-		.ppEnabledExtensionNames = glfwExtensions
+		.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
+		.ppEnabledExtensionNames = requiredExtensions.data()
 	};
 	instance = vk::raii::Instance(context, createInfo);
 
@@ -104,4 +96,28 @@ int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication instance started run()");
 	return EXIT_SUCCESS;
+}
+
+std::vector<const char*> VulkanApplication::getRequiredExtensions()
+{
+	// Add GLFW required extentions
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+	// Add Debug extension is validation layers are required
+	if (enableValidationLayers)
+		extensions.push_back(vk::EXTDebugUtilsExtensionName);
+
+	return extensions;
+}
+
+std::vector<const char*> VulkanApplication::getRequiredLayers()
+{
+	std::vector<const char*> requiredLayers;
+	// Add validation layers is required
+	if (enableValidationLayers)
+		requiredLayers.assign(validationLayers.begin(), validationLayers.end());
+	return requiredLayers;
 }

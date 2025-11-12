@@ -5,6 +5,7 @@
 #include <algorithm> // For std::ranges
 #include <vector>
 #include <array>
+#include <stdexcept> // For std::runtime_error
 
 // Remove vulkan.hpp struct constructors 
 // in favor of explicit designated initialization
@@ -44,7 +45,6 @@ private:
 	 * Vulkan instance
 	 * crucial for everything vulkan
 	 */
-
 	vk::raii::Instance instance;
 	/*
 	 * Functions that returns required extentions
