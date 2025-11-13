@@ -1,13 +1,14 @@
 #include "VulkanApplication.hpp"
 
-inline static const char* findMissingItem(const std::vector<const char*>& required,
-                                   const std::vector<const char*>& available)
+inline static const char* findMissingItem (
+		const std::vector<const char*>& required,
+		const std::vector<const char*>& available )
 {
 	for (const char* requiredName : required)
 	{
 		const bool found = std::ranges::any_of( available,
 			[requiredName] (const char* availableName)
-				{return strcmp(requiredName, availableName) == 0;}
+				{ return strcmp(requiredName, availableName) == 0;}
 		);
 
 		// return missing name
@@ -35,10 +36,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	////////////////////////////////////////////////////////////////////////////////
 	// Extensions
 	////////////////////////////////////////////////////////////////////////////////
-	std::vector<const char*> requiredExtensions = getRequiredExtensions();
+	const std::vector<const char*> requiredExtensions = getRequiredExtensions();
+	std::vector<const char*> availableExtensionNames;
+
 	auto availableExtensionProps = context.enumerateInstanceExtensionProperties();
 
-	std::vector<const char*> availableExtensionNames;
 	availableExtensionNames.reserve(availableExtensionProps.size());
 	for (const auto& prop : availableExtensionProps)
 		availableExtensionNames.push_back(prop.extensionName);
@@ -55,10 +57,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	////////////////////////////////////////////////////////////////////////////////
 	// Layers
 	////////////////////////////////////////////////////////////////////////////////
-	std::vector<const char*> requiredLayers = getRequiredLayers();
+	const std::vector<const char*> requiredLayers = getRequiredLayers();
+	std::vector<const char*> availableLayerNames;
+
 	auto availableLayerProps = context.enumerateInstanceLayerProperties();
 
-	std::vector<const char*> availableLayerNames;
 	availableLayerNames.reserve(availableLayerProps.size());
 	for (const auto& prop : availableLayerProps)
 		availableLayerNames.push_back(prop.layerName);
@@ -107,7 +110,7 @@ std::vector<const char*> VulkanApplication::getRequiredExtensions()
 	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 	// Add Debug extension is validation layers are required
-	if (enableValidationLayers)
+	if constexpr (enableValidationLayers)
 		extensions.push_back(vk::EXTDebugUtilsExtensionName);
 
 	return extensions;
@@ -117,7 +120,7 @@ std::vector<const char*> VulkanApplication::getRequiredLayers()
 {
 	std::vector<const char*> requiredLayers;
 	// Add validation layers is required
-	if (enableValidationLayers)
+	if constexpr (enableValidationLayers)
 		requiredLayers.assign(validationLayers.begin(), validationLayers.end());
 	return requiredLayers;
 }

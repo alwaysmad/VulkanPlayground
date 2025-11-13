@@ -37,10 +37,10 @@ private:
 	static constexpr bool enableValidationLayers = false;
 #else
 	static constexpr bool enableValidationLayers = true;
+#endif
 	static constexpr std::array validationLayers = {
 		"VK_LAYER_KHRONOS_validation"
 	};
-#endif
 	/*
 	 * Vulkan instance
 	 * crucial for everything vulkan
