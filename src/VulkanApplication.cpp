@@ -2,6 +2,8 @@
 
 static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validation" };
 
+std::ofstream VulkanApplication::logFile;
+
 VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
 	appName(AppName),
@@ -9,6 +11,16 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	debugMessenger(nullptr)
 {
 	LOG_DEBUG("Application name is " << appName);
+
+	if constexpr (enableValidationLayers)
+	{
+		const std::string path = "/tmp/" + appName + ".log";
+		logFile.open(path);
+		LOG_DEBUG("Outputting additional logs to " << path);
+	}
+
+	if (glfwInit() != GLFW_TRUE)
+		{ throw std::runtime_error("Failed to initialize GLFW!"); }
 
 	const vk::ApplicationInfo appInfo {
 		.pApplicationName = appName.c_str(),
@@ -114,6 +126,9 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 VulkanApplication::~VulkanApplication()
 {
 	LOG_DEBUG("VulkanApplication instance destroyed");
+	glfwTerminate();
+	if (logFile.is_open())
+		{ logFile.close(); }
 }
 
 int VulkanApplication::run()
@@ -155,28 +170,36 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanApplication::debugCallback (
 		const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void*)
 {
-	// Use std::cerr for warnings and errors, std::cout for info
-	std::ostream& outStream = (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
-		? std::cerr
-		: std::cout;
+	// Convert 'type' to a string once
+	const auto typeStr = to_string(type);
 
-	// Select the correct style prefix based on severity
-	const char* stylePrefix = ""; // Default for Info
-	if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
-		{stylePrefix = DBG_COLOR_RED;}
-	else if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
-		{stylePrefix = DBG_COLOR_YELLOW;}
-	else if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose)
-		{stylePrefix = DBG_STYLE_UNDERLINE;}
+	// Check severity and direct the output
+	if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+	{
+		// --- CONSOLE (Warnings and Errors) ---
+		std::ostream& outStream = std::cerr;
+		const char* stylePrefix = "";
+		
+		if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+			{ stylePrefix = DBG_COLOR_RED; }
+		else if (severity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+			{ stylePrefix = DBG_COLOR_YELLOW; }
 
-	outStream
-		<< stylePrefix
-		<< DBG_STYLE_BOLD 
-		<< to_string(type)
-		<< DBG_COLOR_RESET
-		<< stylePrefix
-		<< " " << pCallbackData->pMessage
-		<< DBG_COLOR_RESET << std::endl;
+		outStream
+			<< stylePrefix
+			<< DBG_STYLE_BOLD 
+			<< typeStr
+			<< DBG_COLOR_RESET
+			<< stylePrefix
+			<< " " << pCallbackData->pMessage
+			<< DBG_COLOR_RESET << std::endl;
+	}
+	else
+	{
+		// --- LOG FILE (Info and Verbose) ---
+		if (logFile.is_open())
+			{ logFile << typeStr << " " << pCallbackData->pMessage << std::endl; }
+	}
 
 	return vk::False;
 }

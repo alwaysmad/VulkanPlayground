@@ -7,6 +7,7 @@
 #include <array>
 #include <stdexcept> // For std::runtime_error
 #include <cstring> // For strcmp
+#include <fstream> // for file output
 
 // Remove vulkan.hpp struct constructors 
 // in favor of explicit designated initialization
@@ -54,6 +55,10 @@ private:
 	 * Debug messanger handle
 	 */
 	vk::raii::DebugUtilsMessengerEXT debugMessenger;
+	/*
+	 * Log file for unimportaint output
+	 */
+	static std::ofstream logFile;
 public:
 	/*
 	 * Constructor
