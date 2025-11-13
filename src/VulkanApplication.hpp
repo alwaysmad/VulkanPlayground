@@ -6,6 +6,7 @@
 #include <vector>
 #include <array>
 #include <stdexcept> // For std::runtime_error
+#include <cstring> // For strcmp
 
 // Remove vulkan.hpp struct constructors 
 // in favor of explicit designated initialization
@@ -38,9 +39,6 @@ private:
 #else
 	static constexpr bool enableValidationLayers = true;
 #endif
-	static constexpr std::array validationLayers = {
-		"VK_LAYER_KHRONOS_validation"
-	};
 	/*
 	 * Vulkan instance
 	 * crucial for everything vulkan
