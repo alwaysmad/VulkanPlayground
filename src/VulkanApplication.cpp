@@ -20,7 +20,8 @@ inline static const char* findMissingItem (
 VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
 	appName(AppName),
-	instance(nullptr)
+	instance(nullptr),
+	debugMessenger(nullptr)
 {
 	LOG_DEBUG("Application name is " << appName);
 
@@ -88,6 +89,33 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	instance = vk::raii::Instance(context, createInfo);
 
 	LOG_DEBUG("VulkanApplication instance created successfully");
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Validation layer's debug callback
+	////////////////////////////////////////////////////////////////////////////////
+	if constexpr (enableValidationLayers)
+	{
+		const vk::DebugUtilsMessageSeverityFlagsEXT severityFlags ( 
+				vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+				vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | 
+				vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+				vk::DebugUtilsMessageSeverityFlagBitsEXT::eError );
+
+		const vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags ( 
+				vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+				vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+				vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation );
+
+		const vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{
+		    .messageSeverity = severityFlags,
+		    .messageType = messageTypeFlags,
+		    .pfnUserCallback = &debugCallback
+		    };
+		
+		debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
+
+		LOG_DEBUG("Debug callback setup successfully");
+	}
 }
 
 VulkanApplication::~VulkanApplication()
@@ -123,4 +151,15 @@ std::vector<const char*> VulkanApplication::getRequiredLayers()
 	if constexpr (enableValidationLayers)
 		requiredLayers.assign(validationLayers.begin(), validationLayers.end());
 	return requiredLayers;
+}
+
+VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanApplication::debugCallback (
+		vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+		vk::DebugUtilsMessageTypeFlagsEXT type,
+		const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		void*)
+{
+	std::cout << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
+
+    return vk::False;
 }

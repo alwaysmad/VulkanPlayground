@@ -52,6 +52,10 @@ private:
 	 */
 	static std::vector<const char*> getRequiredExtensions();
 	static std::vector<const char*> getRequiredLayers();
+	/*
+	 * Debug messanger handle
+	 */
+	vk::raii::DebugUtilsMessengerEXT debugMessenger;
 public:
 	/*
 	 * Constructor
@@ -66,4 +70,12 @@ public:
 	 * Run the actual programm
 	 */
 	int run();
+	/*
+	 * Debug messanger function
+	 */
+	static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback (
+			vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+			vk::DebugUtilsMessageTypeFlagsEXT type,
+			const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+			void*);
 };
