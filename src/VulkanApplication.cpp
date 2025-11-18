@@ -60,7 +60,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 					[requiredExtension](auto const& extensionProperty)
 					{ return strcmp(extensionProperty.extensionName, requiredExtension) == 0; }
 				))
-			throw std::runtime_error("Required extension not supported: " + std::string(requiredExtension));
+			{ throw std::runtime_error("Required extension not supported: " + std::string(requiredExtension)); }
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -85,7 +85,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 					[requiredLayer](auto const& layerProperty)
 					{ return strcmp(layerProperty.layerName, requiredLayer) == 0; }
 				))
-			throw std::runtime_error("Required layer not supported: " + std::string(requiredLayer));
+			{ throw std::runtime_error("Required layer not supported: " + std::string(requiredLayer)); }
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -147,12 +147,14 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	if (*physicalDevice == nullptr) // didn't find the name
 		{ throw std::runtime_error("Could not find requested device: " + deviceName); }
 	else
-		{ LOG_DEBUG("Successfully selected requested device: '"
+		{ LOG_DEBUG("Successfully selected device: '"
 				<< physicalDevice.getProperties().deviceName << "'."); }
 
 	// Check some properties
 	const auto props = physicalDevice.getProperties();
-	
+	if (props.apiVersion <= vk::ApiVersion13)
+		{ throw std::runtime_error("Selected device " + deviceName + " does not support Vulkan 1.3"); }
+
 	if (props.deviceType != vk::PhysicalDeviceType::eDiscreteGpu)
 	{
 		std::cerr << DBG_COLOR_YELLOW
@@ -160,11 +162,8 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 				  << "' is NOT a discrete GPU."
 				  << DBG_COLOR_RESET << std::endl;
 	}
-	if (props.apiVersion <= vk::ApiVersion13)
-		{ throw std::runtime_error("Selected device " + deviceName + " does not support Vulkan 1.3"); }
 
 	const auto availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
-
 	LOG_DEBUG("Available device extensions (" << availableExtensions.size() << ") :");
 	for (const auto& i : availableExtensions) { LOG_DEBUG("\t" << i.extensionName); }
 
