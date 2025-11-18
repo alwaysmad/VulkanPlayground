@@ -137,17 +137,14 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	LOG_DEBUG("Available Physical Devices (" << devices.size() << ") :");
 	for (const auto& device : devices)
 	{
-		// Get properties (name, type, API version)
 		const auto props = device.getProperties();
-		// Get features (geometry shader, tessellation, etc.)
-		// const auto features = device.getFeatures();
 		LOG_DEBUG("\t" << props.deviceName);
 		// If we found the requested name, grab it immediately
 		if ( std::string(props.deviceName) == deviceName )
 			{ physicalDevice = device; }
 	}
 
-	if (*physicalDevice == nullptr) // User asked for a name, but we didn't find it
+	if (*physicalDevice == nullptr) // didn't find the name
 		{ throw std::runtime_error("Could not find requested device: " + deviceName); }
 	else
 		{ LOG_DEBUG("Successfully selected requested device: '"
@@ -175,14 +172,14 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	LOG_DEBUG("Required device extensions (" << requiredDeviceExtensions.size() << ") :");
 	for (const auto& i : requiredDeviceExtensions) { LOG_DEBUG("\t" << i); }
 
-	for (const auto& requiredDeviceExtension: requiredDeviceExtensions)
+	for (const auto& requiredDeviceExtension : requiredDeviceExtensions)
 	{
 		if (std::ranges::none_of(
 					availableExtensions,
 					[requiredDeviceExtension](auto const& extensionProperty)
-					{ return strcmp(extensionProperty.extensionName, requiredExtension) == 0; }
+					{ return strcmp(extensionProperty.extensionName, requiredDeviceExtension) == 0; }
 				))
-			throw std::runtime_error("Required device extension not supported: " + std::string(requiredExtension));
+		{ throw std::runtime_error("Required device extension not supported: " + std::string(requiredDeviceExtension)); }
 	}
 }
 
