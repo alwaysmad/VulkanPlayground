@@ -8,6 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	context(),
 	appName(AppName),
 	instance(nullptr),
+	physicalDevice(nullptr),
 	debugMessenger(nullptr)
 {
 	LOG_DEBUG("Application name is " << appName);
@@ -27,7 +28,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 		.pEngineName = "No Engine",
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
-		.apiVersion = vk::ApiVersion14
+		.apiVersion = vk::ApiVersion13 // 1.4 required ???
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -114,12 +115,25 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	};
 
 	instance = vk::raii::Instance(context, createInfo);
-	LOG_DEBUG("VulkanApplication instance created successfully");
+	LOG_DEBUG("Vulkan instance created successfully");
 
 	if constexpr (enableValidationLayers)
 	{
 		debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
-		LOG_DEBUG("Debug callback setup successfully");
+		LOG_DEBUG("Debug callback set up successfully");
+	}
+	////////////////////////////////////////////////////////////////////////////////
+	// Selecting a physical device
+	////////////////////////////////////////////////////////////////////////////////
+	const auto devices = instance.enumeratePhysicalDevices();
+
+	if (devices.empty())
+		{ throw std::runtime_error("failed to find GPUs with Vulkan support!"); }
+
+	for (const auto& device : devices)
+	{
+		//const auto deviceProperties = device.getProperties();
+		//const auto deviceFeatures = physicalDevice.getFeatures();
 	}
 }
 
@@ -171,7 +185,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanApplication::debugCallback (
 		void*)
 {
 	// Convert 'type' to a string once
-	const auto typeStr = to_string(type);
+	const std::string typeStr = to_string(type);
 
 	// Check severity and direct the output
 	if (severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)

@@ -6,6 +6,14 @@ set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps CACHE PATH "Base dir
 
 project(SimpleVulkan LANGUAGES CXX)
 
+# --- Check for GCC 12+ ---
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+        message(FATAL_ERROR "GCC version must be at least 12.0! Found: ${CMAKE_CXX_COMPILER_VERSION}. Please enable gcc-toolset-12.")
+    endif()
+endif()
+# -------------------------
+
 # --- Set Build Type and Flags ---
 # Set a default build type if none is specified (e.g., Debug)
 if(NOT CMAKE_BUILD_TYPE)

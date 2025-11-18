@@ -46,7 +46,11 @@ private:
 	 */
 	vk::raii::Instance instance;
 	/*
-	 * Functions that returns required extentions
+	 * Physical Device handle
+	 */
+	vk::raii::PhysicalDevice physicalDevice;
+	/*
+	 * Functions that return required extentions
 	 * and required layers
 	 */
 	static std::vector<const char*> getRequiredExtensions();
