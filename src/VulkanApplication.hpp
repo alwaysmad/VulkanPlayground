@@ -35,6 +35,10 @@ private:
 	 * Application name
 	 */
 	const std::string appName;
+	/*
+	 * Used device name
+	 */
+	const std::string deviceName;
 #ifdef NDEBUG
 	static constexpr bool enableValidationLayers = false;
 #else
@@ -52,9 +56,11 @@ private:
 	/*
 	 * Functions that return required extentions
 	 * and required layers
+	 * and required device extentions
 	 */
 	static std::vector<const char*> getRequiredExtensions();
 	static std::vector<const char*> getRequiredLayers();
+	static std::vector<const char*> getRequiredDeviceExtensions();
 	/*
 	 * Debug messanger handle
 	 */
@@ -68,7 +74,7 @@ public:
 	 * Constructor
 	 * handles all initializations
 	 */
-	explicit VulkanApplication(const std::string&);
+	explicit VulkanApplication(const std::string&, const std::string&);
 	/*
 	 * Destructor
 	 */

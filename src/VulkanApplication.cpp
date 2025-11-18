@@ -1,12 +1,19 @@
 #include "VulkanApplication.hpp"
 
 static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validation" };
+static constexpr std::array deviceExtensionsNames = { 
+	vk::KHRSwapchainExtensionName,
+	vk::KHRSpirv14ExtensionName,
+	vk::KHRSynchronization2ExtensionName,
+	vk::KHRCreateRenderpass2ExtensionName
+};
 
 std::ofstream VulkanApplication::logFile;
 
-VulkanApplication::VulkanApplication(const std::string& AppName) :
+VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName) :
 	context(),
 	appName(AppName),
+	deviceName(DeviceName),
 	instance(nullptr),
 	physicalDevice(nullptr),
 	debugMessenger(nullptr)
@@ -127,13 +134,55 @@ VulkanApplication::VulkanApplication(const std::string& AppName) :
 	////////////////////////////////////////////////////////////////////////////////
 	const auto devices = instance.enumeratePhysicalDevices();
 
-	if (devices.empty())
-		{ throw std::runtime_error("failed to find GPUs with Vulkan support!"); }
-
+	LOG_DEBUG("Available Physical Devices (" << devices.size() << ") :");
 	for (const auto& device : devices)
 	{
-		//const auto deviceProperties = device.getProperties();
-		//const auto deviceFeatures = physicalDevice.getFeatures();
+		// Get properties (name, type, API version)
+		const auto props = device.getProperties();
+		// Get features (geometry shader, tessellation, etc.)
+		// const auto features = device.getFeatures();
+		LOG_DEBUG("\t" << props.deviceName);
+		// If we found the requested name, grab it immediately
+		if ( std::string(props.deviceName) == deviceName )
+			{ physicalDevice = device; }
+	}
+
+	if (*physicalDevice == nullptr) // User asked for a name, but we didn't find it
+		{ throw std::runtime_error("Could not find requested device: " + deviceName); }
+	else
+		{ LOG_DEBUG("Successfully selected requested device: '"
+				<< physicalDevice.getProperties().deviceName << "'."); }
+
+	// Check some properties
+	const auto props = physicalDevice.getProperties();
+	
+	if (props.deviceType != vk::PhysicalDeviceType::eDiscreteGpu)
+	{
+		std::cerr << DBG_COLOR_YELLOW
+				  << "[WARNING] Selected device '" << deviceName
+				  << "' is NOT a discrete GPU."
+				  << DBG_COLOR_RESET << std::endl;
+	}
+	if (props.apiVersion <= vk::ApiVersion13)
+		{ throw std::runtime_error("Selected device " + deviceName + " does not support Vulkan 1.3"); }
+
+	const auto availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+
+	LOG_DEBUG("Available device extensions (" << availableExtensions.size() << ") :");
+	for (const auto& i : availableExtensions) { LOG_DEBUG("\t" << i.extensionName); }
+
+	const auto requiredDeviceExtensions = getRequiredDeviceExtensions();
+	LOG_DEBUG("Required device extensions (" << requiredDeviceExtensions.size() << ") :");
+	for (const auto& i : requiredDeviceExtensions) { LOG_DEBUG("\t" << i); }
+
+	for (const auto& requiredDeviceExtension: requiredDeviceExtensions)
+	{
+		if (std::ranges::none_of(
+					availableExtensions,
+					[requiredDeviceExtension](auto const& extensionProperty)
+					{ return strcmp(extensionProperty.extensionName, requiredExtension) == 0; }
+				))
+			throw std::runtime_error("Required device extension not supported: " + std::string(requiredExtension));
 	}
 }
 
@@ -177,6 +226,14 @@ std::vector<const char*> VulkanApplication::getRequiredLayers()
 	return requiredLayers;
 }
 
+std::vector<const char*> VulkanApplication::getRequiredDeviceExtensions()
+{
+	std::vector<const char*> deviceExtensions;
+	
+	deviceExtensions.assign(deviceExtensionsNames.begin(), deviceExtensionsNames.end());
+	
+	return deviceExtensions;
+}
 
 VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanApplication::debugCallback (
 		vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
