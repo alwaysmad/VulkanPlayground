@@ -1,5 +1,8 @@
 #include "VulkanApplication.hpp"
 
+static constexpr uint32_t WIDTH  = 800;
+static constexpr uint32_t HEIGHT = 600;
+
 static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validation" };
 static constexpr std::array deviceExtensionsNames = { 
 	vk::KHRSwapchainExtensionName,
@@ -11,27 +14,27 @@ static constexpr std::array deviceExtensionsNames = {
 std::ofstream VulkanApplication::logFile;
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName) :
+	window(nullptr),
 	context(),
 	appName(AppName),
 	deviceName(DeviceName),
 	instance(nullptr),
 	debugMessenger(nullptr),
+	surface(nullptr),
 	physicalDevice(nullptr),
 	logicalDevice(nullptr),
 	graphicsQueue(nullptr),
+	presentQueue(nullptr),
 	computeQueue(nullptr)
 {
 	LOG_DEBUG("Application name is " << appName);
-
+	
 	if constexpr (enableValidationLayers)
 	{
 		const std::string path = "/tmp/" + appName + ".log";
 		logFile.open(path);
 		LOG_DEBUG("Outputting additional logs to " << path);
 	}
-
-	if (glfwInit() != GLFW_TRUE)
-		{ throw std::runtime_error("Failed to initialize GLFW!"); }
 
 	const vk::ApplicationInfo appInfo {
 		.pApplicationName = appName.c_str(),
@@ -40,6 +43,21 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 		.apiVersion = vk::ApiVersion13 // 1.4 required ???
 	};
+
+	////////////////////////////////////////////////////////////////////////////////
+	// GLFW and Window
+	////////////////////////////////////////////////////////////////////////////////
+
+	if (glfwInit() != GLFW_TRUE)
+		{ throw std::runtime_error("Failed to initialize GLFW"); }
+
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	//glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+	window = glfwCreateWindow(WIDTH, HEIGHT, appName.c_str(), nullptr, nullptr);
+
+	if (!window) { throw std::runtime_error("Failed to create GLFW window"); }
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Extensions
@@ -133,6 +151,14 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		LOG_DEBUG("Debug callback set up successfully");
 	}
 	////////////////////////////////////////////////////////////////////////////////
+	// Create surface
+	////////////////////////////////////////////////////////////////////////////////
+	VkSurfaceKHR _surface;
+	if (glfwCreateWindowSurface(*instance, window, nullptr, &_surface) != VK_SUCCESS)
+		{ throw std::runtime_error("failed to create window surface!"); }
+	surface = vk::raii::SurfaceKHR(instance, _surface);
+
+	////////////////////////////////////////////////////////////////////////////////
 	// Selecting a physical device
 	////////////////////////////////////////////////////////////////////////////////
 	const auto devices = instance.enumeratePhysicalDevices();
@@ -183,6 +209,17 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 				))
 		{ throw std::runtime_error("Required device extension not supported: " + std::string(requiredDeviceExtension)); }
 	}
+	// check features
+	const auto features = physicalDevice.template getFeatures2<
+		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan13Features,
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT >();
+
+	if (features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering)
+		{ throw std::runtime_error("Selected device does not support dynamic Rendering feature"); }
+	if (features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState)
+		{ throw std::runtime_error("Selected device does not support extended Dynamic State feature"); }
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Setting up queue families
 	////////////////////////////////////////////////////////////////////////////////
@@ -203,8 +240,8 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		LOG_DEBUG("\t" << i << " : " << flags);
 	}
 	// Find required queue families' indices
-	uint32_t graphicsQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
-
+	uint32_t graphicsQueueIndex = UINT32_MAX, presentQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
+	// graphics queue families
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
 			{ graphicsQueueIndex = i; break; } }
@@ -212,7 +249,15 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		{ throw std::runtime_error("Failed to find graphics queue family"); }
 	else
 		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
-	
+	// present queue family
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		{ if (physicalDevice.getSurfaceSupportKHR(i, *surface))
+			{ presentQueueIndex = i; break; } }
+	if (presentQueueIndex == UINT32_MAX)
+		{ throw std::runtime_error("Failed to find queue family that can present to surface"); }
+	else
+		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as present queue family"); }
+	// compute queue family
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute)
 			{ computeQueueIndex = i; break; } }
@@ -225,8 +270,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	// Prepare Queue Creation Info
 	////////////////////////////////////////////////////////////////////////////////
 	// We use a set to ensure we only create ONE queue info per unique family.
-	// If graphics and compute share a family (like on Intel), this set has size 1.
-	std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, computeQueueIndex };
+	std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex };
 	
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 	constexpr float queuePriority = 1.0f;
@@ -264,7 +308,6 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		// .enabledLayerCount is deprecated/ignored for Devices, so we skip it.
 	};
 
-	// Create the RAII Device
 	logicalDevice = vk::raii::Device(physicalDevice, deviceCreateInfo);
 	LOG_DEBUG("Logical Device created successfully");
 
@@ -273,8 +316,9 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	////////////////////////////////////////////////////////////////////////////////
 	// We request index 0 for both. 
 	// If they are the same family, we are sharing the same actual queue, which is fine.
-	graphicsQueue = vk::raii::Queue(logicalDevice, graphicsQueueIndex, 0);
-	computeQueue = vk::raii::Queue(logicalDevice, computeQueueIndex, 0);
+	graphicsQueue = logicalDevice.getQueue(graphicsQueueIndex, 0);
+	presentQueue = logicalDevice.getQueue(presentQueueIndex, 0);
+	computeQueue  = logicalDevice.getQueue(computeQueueIndex, 0);	
 	
 	LOG_DEBUG("Graphics and Compute queues retrieved");
 }
@@ -282,7 +326,10 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 VulkanApplication::~VulkanApplication()
 {
 	LOG_DEBUG("VulkanApplication instance destroyed");
+	
+	glfwDestroyWindow(window);
 	glfwTerminate();
+	
 	if (logFile.is_open())
 		{ logFile.close(); }
 }
@@ -290,6 +337,12 @@ VulkanApplication::~VulkanApplication()
 int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication instance started run()");
+
+	/*while (!glfwWindowShouldClose(window))
+	{
+		glfwPollEvents();
+	}*/
+
 	return EXIT_SUCCESS;
 }
 

@@ -25,6 +25,10 @@ class VulkanApplication
 {
 private:
 	/*
+	 * Window
+	 */
+	GLFWwindow* window;
+	/*
 	 * Vulkan function loader object.
 	 * The first object to create as it finds and loads 
 	 * core Vulkan function pointers from system's driver.
@@ -55,6 +59,10 @@ private:
 	 */
 	vk::raii::DebugUtilsMessengerEXT debugMessenger;
 	/*
+	 * Surface handle
+	 */
+	vk::raii::SurfaceKHR surface;
+	/*
 	 * Physical Device handle
 	 */
 	vk::raii::PhysicalDevice physicalDevice;
@@ -74,6 +82,7 @@ private:
 	 * Queue handles
 	 */
 	vk::raii::Queue graphicsQueue;
+	vk::raii::Queue presentQueue;
 	vk::raii::Queue computeQueue;	
 	/*
 	 * Log file for unimportaint output
