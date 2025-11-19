@@ -8,6 +8,7 @@
 #include <stdexcept> // For std::runtime_error
 #include <cstring> // For strcmp
 #include <fstream> // for file output
+#include <set>
 
 // Remove vulkan.hpp struct constructors 
 // in favor of explicit designated initialization

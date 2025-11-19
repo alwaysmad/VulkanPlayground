@@ -8,9 +8,6 @@ static constexpr std::array deviceExtensionsNames = {
 	vk::KHRCreateRenderpass2ExtensionName
 };
 
-static constexpr float graphicsQueuePriority = 0.0f;
-static constexpr float computeQueuePriority = 1.0f;
-
 std::ofstream VulkanApplication::logFile;
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName) :
@@ -223,17 +220,63 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		{ throw std::runtime_error("Failed to find compute queue family"); }
 	else
 		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as compute queue family"); }
-	// Creating queue handles
-	const vk::DeviceQueueCreateInfo graphicsQueueCreateInfo {
-		.queueFamilyIndex = graphicsQueueIndex,
-		.queueCount = 1,
-		.pQueuePriorities = &graphicsQueuePriority
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Prepare Queue Creation Info
+	////////////////////////////////////////////////////////////////////////////////
+	// We use a set to ensure we only create ONE queue info per unique family.
+	// If graphics and compute share a family (like on Intel), this set has size 1.
+	std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, computeQueueIndex };
+	
+	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+	constexpr float queuePriority = 1.0f;
+
+	for (uint32_t queueFamily : uniqueQueueFamilies)
+	{
+		vk::DeviceQueueCreateInfo queueCreateInfo {
+			.queueFamilyIndex = queueFamily,
+			.queueCount = 1,
+			.pQueuePriorities = &queuePriority
+		};
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Create Logical Device
+	////////////////////////////////////////////////////////////////////////////////
+	// Create a chain of feature structures
+	const vk::StructureChain <
+		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan13Features,
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
+	> featureChain = {
+		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
+		{.dynamicRendering = true }, // Enable dynamic rendering from Vulkan 1.3
+		{.extendedDynamicState = true } // Enable extended dynamic state from the extension
 	};
-	const vk::DeviceQueueCreateInfo computeQueueCreateInfo {
-		.queueFamilyIndex = computeQueueIndex,
-		.queueCount = 1,
-		.pQueuePriorities = &computeQueuePriority
+
+	const vk::DeviceCreateInfo deviceCreateInfo {
+		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+		.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+		.pQueueCreateInfos = queueCreateInfos.data(),
+		.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size()),
+		.ppEnabledExtensionNames = requiredDeviceExtensions.data()
+		// .enabledLayerCount is deprecated/ignored for Devices, so we skip it.
 	};
+
+	// Create the RAII Device
+	logicalDevice = vk::raii::Device(physicalDevice, deviceCreateInfo);
+	LOG_DEBUG("Logical Device created successfully");
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Get Queue Handles
+	////////////////////////////////////////////////////////////////////////////////
+	// We request index 0 for both. 
+	// If they are the same family, we are sharing the same actual queue, which is fine.
+	graphicsQueue = vk::raii::Queue(logicalDevice, graphicsQueueIndex, 0);
+	computeQueue = vk::raii::Queue(logicalDevice, computeQueueIndex, 0);
+	
+	LOG_DEBUG("Graphics and Compute queues retrieved");
 }
 
 VulkanApplication::~VulkanApplication()
