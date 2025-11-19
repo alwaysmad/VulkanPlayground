@@ -50,10 +50,6 @@ private:
 	 */
 	vk::raii::Instance instance;
 	/*
-	 * Debug messanger handle
-	 */
-	vk::raii::DebugUtilsMessengerEXT debugMessenger;
-	/*
 	 * Physical Device handle
 	 */
 	vk::raii::PhysicalDevice physicalDevice;
@@ -70,10 +66,9 @@ private:
 	static std::vector<const char*> getRequiredLayers();
 	static std::vector<const char*> getRequiredDeviceExtensions();
 	/*
-	 * Queue handles
+	 * Debug messanger handle
 	 */
-	vk::raii::Queue graphicsQueue;
-	vk::raii::Queue computeQueue;	
+	vk::raii::DebugUtilsMessengerEXT debugMessenger;
 	/*
 	 * Log file for unimportaint output
 	 */

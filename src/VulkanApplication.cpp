@@ -8,6 +8,9 @@ static constexpr std::array deviceExtensionsNames = {
 	vk::KHRCreateRenderpass2ExtensionName
 };
 
+static constexpr float graphicsQueuePriority = 0.0f;
+static constexpr float computeQueuePriority = 1.0f;
+
 std::ofstream VulkanApplication::logFile;
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName) :
@@ -15,8 +18,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	appName(AppName),
 	deviceName(DeviceName),
 	instance(nullptr),
+	debugMessenger(nullptr),
 	physicalDevice(nullptr),
-	debugMessenger(nullptr)
+	logicalDevice(nullptr),
+	graphicsQueue(nullptr),
+	computeQueue(nullptr)
 {
 	LOG_DEBUG("Application name is " << appName);
 
@@ -93,16 +99,16 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	////////////////////////////////////////////////////////////////////////////////
 	// Set up debug messager callback
 	constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags ( 
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | 
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eError );
-
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | 
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+	);
 	constexpr vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags ( 
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation );
-
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+	);
 	constexpr vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT {
 		.messageSeverity = severityFlags,
 		.messageType = messageTypeFlags,
@@ -158,9 +164,9 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	if (props.deviceType != vk::PhysicalDeviceType::eDiscreteGpu)
 	{
 		std::cerr << DBG_COLOR_YELLOW
-				  << "[WARNING] Selected device '" << deviceName
-				  << "' is NOT a discrete GPU."
-				  << DBG_COLOR_RESET << std::endl;
+			<< "[WARNING] Selected device '" << deviceName
+			<< "' is NOT a discrete GPU."
+			<< DBG_COLOR_RESET << std::endl;
 	}
 
 	const auto availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
@@ -180,6 +186,54 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 				))
 		{ throw std::runtime_error("Required device extension not supported: " + std::string(requiredDeviceExtension)); }
 	}
+	////////////////////////////////////////////////////////////////////////////////
+	// Setting up queue families
+	////////////////////////////////////////////////////////////////////////////////
+	//
+	const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+	LOG_DEBUG("Found (" << queueFamilies.size() << ") queue families");
+	LOG_DEBUG("G - Graphics, C - Compute, T - Transfer");
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+	{
+		std::string flags;
+		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) flags += "G";
+		else flags += "-";
+		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) flags += "C";
+		else flags += "-";
+		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer) flags += "T";
+		else flags += "-";
+		// Therea are more, but we don't need them 
+		LOG_DEBUG("\t" << i << " : " << flags);
+	}
+	// Find required queue families' indices
+	uint32_t graphicsQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
+
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
+			{ graphicsQueueIndex = i; break; } }
+	if (graphicsQueueIndex == UINT32_MAX)
+		{ throw std::runtime_error("Failed to find graphics queue family"); }
+	else
+		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
+	
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute)
+			{ computeQueueIndex = i; break; } }
+	if (computeQueueIndex == UINT32_MAX)
+		{ throw std::runtime_error("Failed to find compute queue family"); }
+	else
+		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as compute queue family"); }
+	// Creating queue handles
+	const vk::DeviceQueueCreateInfo graphicsQueueCreateInfo {
+		.queueFamilyIndex = graphicsQueueIndex,
+		.queueCount = 1,
+		.pQueuePriorities = &graphicsQueuePriority
+	};
+	const vk::DeviceQueueCreateInfo computeQueueCreateInfo {
+		.queueFamilyIndex = computeQueueIndex,
+		.queueCount = 1,
+		.pQueuePriorities = &computeQueuePriority
+	};
 }
 
 VulkanApplication::~VulkanApplication()
