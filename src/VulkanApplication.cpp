@@ -215,9 +215,9 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT >();
 
-	if (features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering)
+	if (!features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering)
 		{ throw std::runtime_error("Selected device does not support dynamic Rendering feature"); }
-	if (features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState)
+	if (!features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState)
 		{ throw std::runtime_error("Selected device does not support extended Dynamic State feature"); }
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -277,26 +277,30 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 
 	for (uint32_t queueFamily : uniqueQueueFamilies)
 	{
-		vk::DeviceQueueCreateInfo queueCreateInfo {
+		queueCreateInfos.push_back({
 			.queueFamilyIndex = queueFamily,
 			.queueCount = 1,
 			.pQueuePriorities = &queuePriority
-		};
-		queueCreateInfos.push_back(queueCreateInfo);
+		});	
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create Logical Device
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a chain of feature structures
-	const vk::StructureChain <
+	const vk::StructureChain<
 		vk::PhysicalDeviceFeatures2,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
 	> featureChain = {
-		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
-		{.dynamicRendering = true }, // Enable dynamic rendering from Vulkan 1.3
-		{.extendedDynamicState = true } // Enable extended dynamic state from the extension
+		// Core Features 1.0 (Enable samplerAnisotropy if needed)
+		{ .features = { .samplerAnisotropy = VK_TRUE } }, 
+		
+		// Vulkan 1.3 Features
+		{ .dynamicRendering = VK_TRUE }, 
+		
+		// Extended Dynamic State
+		{ .extendedDynamicState = VK_TRUE } 
 	};
 
 	const vk::DeviceCreateInfo deviceCreateInfo {
@@ -305,11 +309,10 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		.pQueueCreateInfos = queueCreateInfos.data(),
 		.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size()),
 		.ppEnabledExtensionNames = requiredDeviceExtensions.data()
-		// .enabledLayerCount is deprecated/ignored for Devices, so we skip it.
 	};
 
 	logicalDevice = vk::raii::Device(physicalDevice, deviceCreateInfo);
-	LOG_DEBUG("Logical Device created successfully");
+	LOG_DEBUG("Logical Device created successfully");	
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Get Queue Handles
