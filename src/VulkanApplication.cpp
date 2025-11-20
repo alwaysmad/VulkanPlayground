@@ -181,7 +181,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 
 	// Check some properties
 	const auto props = physicalDevice.getProperties();
-	if (props.apiVersion <= vk::ApiVersion13)
+	if (props.apiVersion < vk::ApiVersion13)
 		{ throw std::runtime_error("Selected device " + deviceName + " does not support Vulkan 1.3"); }
 
 	if (props.deviceType != vk::PhysicalDeviceType::eDiscreteGpu)
@@ -226,7 +226,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	//
 	const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 	LOG_DEBUG("Found (" << queueFamilies.size() << ") queue families");
-	LOG_DEBUG("G - Graphics, C - Compute, T - Transfer");
+	LOG_DEBUG("G - Graphics, C - Compute, T - Transfer, P - Present");
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 	{
 		std::string flags;
@@ -236,11 +236,14 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		else flags += "-";
 		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer) flags += "T";
 		else flags += "-";
-		// Therea are more, but we don't need them 
+		if (physicalDevice.getSurfaceSupportKHR(i, *surface)) flags += "P";
+		else flags += "-";
+		// There is more, but we don't need them 
 		LOG_DEBUG("\t" << i << " : " << flags);
 	}
 	// Find required queue families' indices
 	uint32_t graphicsQueueIndex = UINT32_MAX, presentQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
+
 	// graphics queue families
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
@@ -249,6 +252,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		{ throw std::runtime_error("Failed to find graphics queue family"); }
 	else
 		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
+
 	// present queue family
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{ if (physicalDevice.getSurfaceSupportKHR(i, *surface))
@@ -256,7 +260,8 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	if (presentQueueIndex == UINT32_MAX)
 		{ throw std::runtime_error("Failed to find queue family that can present to surface"); }
 	else
-		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as present queue family"); }
+		{ LOG_DEBUG("Selected " << presentQueueIndex << " as present queue family"); }
+
 	// compute queue family
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{ if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute)
@@ -264,24 +269,25 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	if (computeQueueIndex == UINT32_MAX)
 		{ throw std::runtime_error("Failed to find compute queue family"); }
 	else
-		{ LOG_DEBUG("Selected " << graphicsQueueIndex << " as compute queue family"); }
+		{ LOG_DEBUG("Selected " << computeQueueIndex << " as compute queue family"); }
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Prepare Queue Creation Info
 	////////////////////////////////////////////////////////////////////////////////
 	// We use a set to ensure we only create ONE queue info per unique family.
-	std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex };
+	const std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex };
 	
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 	constexpr float queuePriority = 1.0f;
 
-	for (uint32_t queueFamily : uniqueQueueFamilies)
+	for (const auto& queueFamily : uniqueQueueFamilies)
 	{
-		queueCreateInfos.push_back({
-			.queueFamilyIndex = queueFamily,
-			.queueCount = 1,
-			.pQueuePriorities = &queuePriority
-		});	
+		queueCreateInfos.emplace_back(
+			vk::DeviceQueueCreateInfo{
+				.queueFamilyIndex = queueFamily,
+				.queueCount = 1,
+				.pQueuePriorities = &queuePriority
+			});
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -294,13 +300,13 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
 	> featureChain = {
 		// Core Features 1.0 (Enable samplerAnisotropy if needed)
-		{ .features = { .samplerAnisotropy = VK_TRUE } }, 
+		{ .features = { .samplerAnisotropy = vk::True } }, 
 		
 		// Vulkan 1.3 Features
-		{ .dynamicRendering = VK_TRUE }, 
+		{ .dynamicRendering = vk::True }, 
 		
 		// Extended Dynamic State
-		{ .extendedDynamicState = VK_TRUE } 
+		{ .extendedDynamicState = vk::True } 
 	};
 
 	const vk::DeviceCreateInfo deviceCreateInfo {
@@ -323,7 +329,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	presentQueue = logicalDevice.getQueue(presentQueueIndex, 0);
 	computeQueue  = logicalDevice.getQueue(computeQueueIndex, 0);	
 	
-	LOG_DEBUG("Graphics and Compute queues retrieved");
+	LOG_DEBUG("Graphics, Present and Compute queues retrieved");
+
+	////////////////////////////////////////////////////////////////////////////////
+	// 
+	////////////////////////////////////////////////////////////////////////////////
 }
 
 VulkanApplication::~VulkanApplication()
