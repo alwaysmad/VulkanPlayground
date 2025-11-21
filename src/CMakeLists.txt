@@ -4,6 +4,9 @@ add_executable(simplevk main.cpp)
 # 2. Add other source files to the target
 target_sources(simplevk PRIVATE
 	VulkanApplication.cpp
+	GlfwContext.cpp
+	VulkanInstance.cpp
+	VulkanWindow.cpp
 	# Add new .cpp files here in the future
 	# MyNewFile.cpp
 	# MyOtherFile.cpp

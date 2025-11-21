@@ -2,98 +2,25 @@
 
 #include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
 #include <string> // For C++ strings
-#include <algorithm> // For std::ranges
-#include <vector>
-#include <array>
 #include <stdexcept> // For std::runtime_error
-#include <cstring> // For strcmp
-#include <fstream> // for file output
-#include <set>
 
-// Remove vulkan.hpp struct constructors 
-// in favor of explicit designated initialization
-#define VULKAN_HPP_NO_CONSTRUCTORS
-
-#include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-
-#define GLFW_INCLUDE_VULKAN // REQUIRED only for GLFW CreateWindowSurface.
-#include <GLFW/glfw3.h>
-
-#include "DebugOutput.hpp"
+#include "GlfwContext.hpp"
+#include "VulkanInstance.hpp"
+#include "VulkanWindow.hpp"
 
 class VulkanApplication
 {
 private:
-	/*
-	 * Window
-	 */
-	GLFWwindow* window;
-	/*
-	 * Vulkan function loader object.
-	 * The first object to create as it finds and loads 
-	 * core Vulkan function pointers from system's driver.
-	 * Manages function that are not bound to either 
-	 * the VkInstance or a VkPhysicalDevice.
-	 */
-	vk::raii::Context context;
-	/*
-	 * Application name
-	 */
 	const std::string appName;
-	/*
-	 * Used device name
-	 */
-	const std::string deviceName;
-#ifdef NDEBUG
-	static constexpr bool enableValidationLayers = false;
-#else
-	static constexpr bool enableValidationLayers = true;
-#endif
-	/*
-	 * Vulkan instance
-	 * crucial for everything vulkan
-	 */
-	vk::raii::Instance instance;
-	/*
-	 * Debug messanger handle
-	 */
-	vk::raii::DebugUtilsMessengerEXT debugMessenger;
-	/*
-	 * Surface handle
-	 */
-	vk::raii::SurfaceKHR surface;
-	/*
-	 * Physical Device handle
-	 */
-	vk::raii::PhysicalDevice physicalDevice;
-	/*
-	 * Logical Device handle
-	 */
-	vk::raii::Device logicalDevice;
-	/*
-	 * Functions that return required extentions
-	 * and required layers
-	 * and required device extentions
-	 */
-	static std::vector<const char*> getRequiredExtensions();
-	static std::vector<const char*> getRequiredLayers();
-	static std::vector<const char*> getRequiredDeviceExtensions();
-	/*
-	 * Queue handles
-	 */
-	vk::raii::Queue graphicsQueue;
-	vk::raii::Queue presentQueue;
-	vk::raii::Queue computeQueue;	
-	/*
-	 * Log file for unimportaint output
-	 */
-	static std::ofstream logFile;
+	GlfwContext glfwContext;
+	VulkanInstance vulkanInstance;
+	VulkanWindow vulkanWindow;
 public:
 	/*
 	 * Constructor
 	 * handles all initializations
 	 */
-	explicit VulkanApplication(const std::string&, const std::string&);
+	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);
 	/*
 	 * Destructor
 	 */
@@ -102,12 +29,4 @@ public:
 	 * Run the actual programm
 	 */
 	int run();
-	/*
-	 * Debug messanger function
-	 */
-	static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback (
-			vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-			vk::DebugUtilsMessageTypeFlagsEXT type,
-			const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-			void*);
 };

@@ -1,3 +1,6 @@
+#define VULKAN_HPP_NO_CONSTRUCTORS
+#include <vulkan/vulkan_raii.hpp> // For everything Vulkan
+                                                           
 #include "VulkanApplication.hpp"
 #include "DebugOutput.hpp" // for console colors
 #include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
@@ -6,7 +9,10 @@ constexpr auto AppName = "SimpleVK";
 
 constexpr auto DeviceName = "Intel(R) Iris(R) Xe Graphics (ADL GT2)";
 
-int main( int argc, char** argv )
+static constexpr uint32_t WIDTH  = 800;
+static constexpr uint32_t HEIGHT = 600;
+
+int main(/* int argc, char** argv*/ )
 {
 	/*try
 	{
@@ -29,7 +35,7 @@ int main( int argc, char** argv )
 		// Create an VulkanApplication instance 
 		// execute run() method 
 		// then destroy instance as it's an anonymous object
-		return VulkanApplication(AppName, DeviceName).run();
+		return VulkanApplication(AppName, DeviceName, WIDTH, HEIGHT).run();
 	}
 	// The exception type for vulkan_raii.hpp is vk::SystemError
 	catch ( const vk::SystemError& e )
