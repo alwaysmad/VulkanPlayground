@@ -117,12 +117,49 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	}
 
 	uint32_t graphicsQueueIndex = UINT32_MAX, presentQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
+
+	// 1. Try to find a queue family that supports BOTH Graphics and Present
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 	{
-		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) graphicsQueueIndex = i;
-		if (m_physicalDevice.getSurfaceSupportKHR(i, *surface)) presentQueueIndex = i;
-		if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) computeQueueIndex = i;
+		const bool supportsGraphics = !!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
+		const bool supportsPresent  = m_physicalDevice.getSurfaceSupportKHR(i, *surface);
+		
+		if (supportsGraphics && supportsPresent)
+		{
+			graphicsQueueIndex = i;
+			presentQueueIndex = i;
+			break;
+		}
 	}
+
+	// 2. If we didn't find a unified one, fallback to separate queues
+	if (graphicsQueueIndex == UINT32_MAX)
+	{
+		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		{
+			if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
+				{ graphicsQueueIndex = i; break; }
+		}
+	}
+	if (presentQueueIndex == UINT32_MAX)
+	{
+		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		{
+			if (m_physicalDevice.getSurfaceSupportKHR(i, *surface))
+				{ presentQueueIndex = i; break; }
+		}
+	}
+
+	// 3. Find Compute (Dedicated if possible, or reuse graphics)
+	// Some vendors have a dedicated compute queue (Async Compute) which is faster.
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+	{
+		if ((queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) && i != graphicsQueueIndex)
+			{ computeQueueIndex = i; break; }
+	}
+	// Fallback: if no dedicated compute queue, use the graphics queue
+	if (computeQueueIndex == UINT32_MAX)
+		{ computeQueueIndex = graphicsQueueIndex; }
 
 	if (graphicsQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find graphics queue family"); }
 	else { LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
@@ -190,4 +227,11 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	m_computeQueue = m_device.getQueue(computeQueueIndex, 0);
 
 	LOG_DEBUG("Graphics, Present and Compute queues retrieved");
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Querying details of swap chain support
+	////////////////////////////////////////////////////////////////////////////////
+	const auto surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR( surface );
+	const std::vector<vk::SurfaceFormatKHR> availableFormats = m_physicalDevice.getSurfaceFormatsKHR( surface );
+	const std::vector<vk::PresentModeKHR> availablePresentModes = m_physicalDevice.getSurfacePresentModesKHR( surface );
 }
