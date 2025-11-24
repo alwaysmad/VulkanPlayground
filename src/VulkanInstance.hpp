@@ -14,11 +14,6 @@ public:
 	inline const vk::raii::Instance& getInstance() const { return instance; }
 	inline const vk::raii::Context& getContext() const { return context; }
 private:
-#ifdef NDEBUG
-	static constexpr bool enableValidationLayers = false;
-#else
-	static constexpr bool enableValidationLayers = true;
-#endif
 	vk::raii::Context context;
 	vk::raii::Instance instance;
 	vk::raii::DebugUtilsMessengerEXT debugMessenger;

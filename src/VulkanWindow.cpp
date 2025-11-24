@@ -9,11 +9,11 @@ VulkanWindow::VulkanWindow(const vk::raii::Instance& instance, uint32_t width, u
 	if (!window)
 		throw std::runtime_error("Failed to create GLFW window");
 
-	VkSurfaceKHR surface;
-	if (glfwCreateWindowSurface(*instance, window, nullptr, &surface) != VK_SUCCESS)
+	VkSurfaceKHR _surface;
+	if (glfwCreateWindowSurface(*instance, window, nullptr, &_surface) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create window surface");
         
-	surface = vk::raii::SurfaceKHR(instance, surface);
+	surface = vk::raii::SurfaceKHR(instance, _surface);
 	LOG_DEBUG("Window and Surface created");
 }
 

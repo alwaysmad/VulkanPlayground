@@ -21,3 +21,9 @@ constexpr auto DBG_COLOR_RESET  = "\033[0m";
 #else
 	#define LOG_DEBUG(...) ((void)0) // does nothing
 #endif
+
+#ifdef NDEBUG
+constexpr bool enableValidationLayers = false;
+#else
+constexpr bool enableValidationLayers = true;
+#endif

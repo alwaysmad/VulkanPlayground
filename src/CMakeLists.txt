@@ -7,6 +7,7 @@ target_sources(simplevk PRIVATE
 	GlfwContext.cpp
 	VulkanInstance.cpp
 	VulkanWindow.cpp
+	VulkanDevice.cpp
 	# Add new .cpp files here in the future
 	# MyNewFile.cpp
 	# MyOtherFile.cpp

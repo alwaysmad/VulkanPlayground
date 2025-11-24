@@ -7,6 +7,7 @@
 #include "GlfwContext.hpp"
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
+#include "VulkanDevice.hpp"
 
 class VulkanApplication
 {
@@ -15,6 +16,7 @@ private:
 	GlfwContext glfwContext;
 	VulkanInstance vulkanInstance;
 	VulkanWindow vulkanWindow;
+	VulkanDevice vulkanDevice;
 public:
 	/*
 	 * Constructor
