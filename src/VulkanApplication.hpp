@@ -8,6 +8,7 @@
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
+#include "VulkanSwapchain.hpp"
 
 class VulkanApplication
 {
@@ -17,6 +18,7 @@ private:
 	VulkanInstance vulkanInstance;
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
+	VulkanSwapchain vulkanSwapchain;
 public:
 	/*
 	 * Constructor

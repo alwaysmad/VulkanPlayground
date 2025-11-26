@@ -11,14 +11,15 @@ class VulkanSwapchain
 {
 public:
 	VulkanSwapchain(const VulkanDevice&, const VulkanWindow&);
+	~VulkanSwapchain();
 
 	// Called when window is resized
 	void recreate();
 
-	const vk::raii::SwapchainKHR& get() const { return m_swapchain; }
-	const vk::Format& getImageFormat() const { return m_imageFormat; }
-	const vk::Extent2D& getExtent() const { return m_extent; }
-	const std::vector<vk::raii::ImageView>& getImageViews() const { return m_imageViews; }
+	inline const vk::raii::SwapchainKHR& getSwapchain() const { return m_swapchain; }
+	inline const vk::Format& getImageFormat() const { return m_imageFormat; }
+	inline const vk::Extent2D& getExtent() const { return m_extent; }
+	inline const std::vector<vk::raii::ImageView>& getImageViews() const { return m_imageViews; }
 
 private:
 	// We keep references to dependencies so we can recreate() later

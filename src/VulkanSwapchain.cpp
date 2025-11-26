@@ -49,7 +49,14 @@ VulkanSwapchain::VulkanSwapchain(const VulkanDevice& device, const VulkanWindow&
 	m_swapchain(nullptr)
 {
 	createSwapchain();
+	m_imageViews.reserve(m_images.size());
 	createImageViews();
+	LOG_DEBUG("VulkanSwapchain instance created");
+}
+
+VulkanSwapchain::~VulkanSwapchain()
+{
+	LOG_DEBUG("VulkanSwapchain instance destroyed");
 }
 
 void VulkanSwapchain::recreate()
@@ -82,9 +89,9 @@ void VulkanSwapchain::createSwapchain()
 	const auto presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
 
 	// 2. Choose Settings
-	auto surfaceFormat = chooseSwapSurfaceFormat(formats);
-	auto presentMode = chooseSwapPresentMode(presentModes);
-	auto extent = chooseSwapExtent(caps, m_window);
+	const auto surfaceFormat = chooseSwapSurfaceFormat(formats);
+	const auto presentMode = chooseSwapPresentMode(presentModes);
+	const auto extent = chooseSwapExtent(caps, m_window);
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Logging details of swap chain support
@@ -129,83 +136,89 @@ void VulkanSwapchain::createSwapchain()
 		}
 	}
 
-	// 3. Image Count (Min + 1 is a good heuristic)
-	// Aim for Triple Buffering
-	uint32_t imageCount = std::clamp(3, caps.minImageCount, caps.maxImageCount);
+	// 3. Image Count
+	// 0 means unlimited
+	uint32_t maxImages = (caps.maxImageCount == 0) 
+                         ? std::numeric_limits<uint32_t>::max() 
+                         : caps.maxImageCount;
+	// Target 3 images, but clamp to valid range
+	uint32_t imageCount = std::clamp(3u, caps.minImageCount, maxImages);	
 
-    // 4. Sharing Mode (Graphics vs Present queues)
-    // We need the indices we stored in VulkanDevice!
-    uint32_t queueFamilyIndices[] = { m_device.graphicsQueueFamilyIndex, m_device.presentQueueFamilyIndex };
-    
-    vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-    uint32_t indexCount = 0;
-    uint32_t* pIndices = nullptr;
+	// 4. Sharing Mode (Graphics vs Present queues)
+	uint32_t queueFamilyIndices[] = { m_device.getGraphicsQueueIndex(), m_device.getPresentQueueIndex() };
 
-    if (m_device.graphicsQueueFamilyIndex != m_device.presentQueueFamilyIndex) {
-        sharingMode = vk::SharingMode::eConcurrent;
-        indexCount = 2;
-        pIndices = queueFamilyIndices;
-    }
+	vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+	uint32_t indexCount = 0;
+	uint32_t* pIndices = nullptr;
 
-    // 5. Create Info
-    vk::SwapchainCreateInfoKHR createInfo {
-        .surface = *surface,
-        .minImageCount = imageCount,
-        .imageFormat = surfaceFormat.format,
-        .imageColorSpace = surfaceFormat.colorSpace,
-        .imageExtent = extent,
-        .imageArrayLayers = 1,
-        .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
-        .imageSharingMode = sharingMode,
-        .queueFamilyIndexCount = indexCount,
-        .pQueueFamilyIndices = pIndices,
-        .preTransform = caps.currentTransform,
-        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
-        .presentMode = presentMode,
-        .clipped = vk::True,
-        .oldSwapchain = nullptr // For now, simple recreation implies destroying old one first
-    };
+	// If queue are different a more advanced logic is required
+	if (queueFamilyIndices[0] != queueFamilyIndices[1])
+	{
+		sharingMode = vk::SharingMode::eConcurrent;
+		indexCount = 2;
+		pIndices = queueFamilyIndices;
+	}
 
-    // 6. Create
-    // Note: We assign to the member variable, replacing any old one.
-    m_swapchain = vk::raii::SwapchainKHR(m_device.device(), createInfo);
+	// 5. Create Info
+	const vk::SwapchainCreateInfoKHR createInfo {
+		.surface = *surface,
+		.minImageCount = imageCount,
+		.imageFormat = surfaceFormat.format,
+		.imageColorSpace = surfaceFormat.colorSpace,
+		.imageExtent = extent,
+		.imageArrayLayers = 1,
+		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+		.imageSharingMode = sharingMode,
+		.queueFamilyIndexCount = indexCount,
+		.pQueueFamilyIndices = pIndices,
+		.preTransform = caps.currentTransform,
+		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+		.presentMode = presentMode,
+		.clipped = vk::True,
+		.oldSwapchain = nullptr // For now, simple recreation implies destroying old one first
+	};
+
+	// 6. Create
+	// Note: We assign to the member variable, replacing any old one.
+	m_swapchain = vk::raii::SwapchainKHR(m_device.device(), createInfo);
     
-    // 7. Store attributes
-    m_imageFormat = surfaceFormat.format;
-    m_extent = extent;
+	// 7. Store attributes
+	m_imageFormat = surfaceFormat.format;
+	m_extent = extent;
     
-    // 8. Get Images (Raw handles, not RAII)
-    m_images = m_swapchain.getImages();
+	// 8. Get Images (Raw handles, not RAII)
+	m_images = m_swapchain.getImages();
     
-    LOG_DEBUG("Swapchain created (" << m_extent.width << "x" << m_extent.height << ")");
+	LOG_DEBUG("Swapchain created (" << m_extent.width << "x" << m_extent.height << ")");
 }
 
-void VulkanSwapchain::createImageViews() {
-    m_imageViews.clear(); // Clear old views if recreating
-    m_imageViews.reserve(m_images.size());
+void VulkanSwapchain::createImageViews()
+{
+	m_imageViews.clear(); // Clear old views if recreating
 
-    for (auto image : m_images) {
-        vk::ImageViewCreateInfo createInfo {
-            .image = image,
-            .viewType = vk::ImageViewType::e2D,
-            .format = m_imageFormat,
-            .components = { 
-                .r = vk::ComponentSwizzle::eIdentity,
-                .g = vk::ComponentSwizzle::eIdentity,
-                .b = vk::ComponentSwizzle::eIdentity,
-                .a = vk::ComponentSwizzle::eIdentity 
-            },
-            .subresourceRange = {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            }
-        };
-        
-        // Emplace back constructs the RAII object in the vector
-        m_imageViews.emplace_back(m_device.device(), createInfo);
-    }
+	for (auto image : m_images)
+	{
+		vk::ImageViewCreateInfo createInfo {
+			.image = image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = m_imageFormat,
+			.components = { 
+				.r = vk::ComponentSwizzle::eIdentity,
+				.g = vk::ComponentSwizzle::eIdentity,
+				.b = vk::ComponentSwizzle::eIdentity,
+				.a = vk::ComponentSwizzle::eIdentity 
+			},
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		};
+
+		// Emplace back constructs the RAII object in the vector
+		m_imageViews.emplace_back(m_device.device(), createInfo);
+	}
 }
 

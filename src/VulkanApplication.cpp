@@ -6,7 +6,8 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	glfwContext(),
 	vulkanInstance(appName, glfwContext),
 	vulkanWindow(vulkanInstance.getInstance(), w, h, appName),
-	vulkanDevice(vulkanInstance.getInstance(), vulkanWindow.getSurface(), DeviceName)
+	vulkanDevice(vulkanInstance.getInstance(), vulkanWindow.getSurface(), DeviceName),
+	vulkanSwapchain(vulkanDevice, vulkanWindow)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);

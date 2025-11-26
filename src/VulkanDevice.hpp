@@ -8,11 +8,14 @@ class VulkanDevice
 public:
 	VulkanDevice(const vk::raii::Instance&, const vk::raii::SurfaceKHR&, const std::string&);
 
-	const vk::raii::Device& device() const { return m_device; }
-	const vk::raii::Queue& graphicsQueue() const { return m_graphicsQueue; }
-	const vk::raii::Queue& presentQueue() const { return m_presentQueue; }
-	const vk::raii::Queue& computeQueue() const { return m_computeQueue; }
-	const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
+	inline const vk::raii::Device& device() const { return m_device; }
+	inline const vk::raii::Queue& graphicsQueue() const { return m_graphicsQueue; }
+	inline const vk::raii::Queue& presentQueue() const { return m_presentQueue; }
+	inline const vk::raii::Queue& computeQueue() const { return m_computeQueue; }
+	inline const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
+
+	inline uint32_t getGraphicsQueueIndex() const { return graphicsQueueIndex; }
+	inline uint32_t getPresentQueueIndex() const { return presentQueueIndex; }
 
 private:
 	vk::raii::PhysicalDevice m_physicalDevice;
