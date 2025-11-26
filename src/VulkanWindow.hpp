@@ -13,8 +13,9 @@ public:
 
 	inline const vk::raii::SurfaceKHR& getSurface() const { return surface; }
 	inline bool shouldClose() const { return glfwWindowShouldClose(window); }
+	inline void waitEvents() const { glfwWaitEvents(); }
 	inline void pollEvents() const { glfwPollEvents(); }
-
+	vk::Extent2D getExtent() const; 
 private:
 	GLFWwindow* window;
 	vk::raii::SurfaceKHR surface;

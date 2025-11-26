@@ -16,7 +16,10 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	m_device(nullptr),
 	m_graphicsQueue(nullptr),
 	m_presentQueue(nullptr),
-	m_computeQueue(nullptr)
+	m_computeQueue(nullptr),
+	graphicsQueueIndex(UINT32_MAX),
+	presentQueueIndex(UINT32_MAX),
+	computeQueueIndex(UINT32_MAX)
 {
 	////////////////////////////////////////////////////////////////////////////////
 	// Find and pick physical device
@@ -115,8 +118,6 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 			LOG_DEBUG("\t" << i << " : " << flags);
 		}
 	}
-
-	uint32_t graphicsQueueIndex = UINT32_MAX, presentQueueIndex = UINT32_MAX, computeQueueIndex = UINT32_MAX;
 
 	// 1. Try to find a queue family that supports BOTH Graphics and Present
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
@@ -228,10 +229,4 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 
 	LOG_DEBUG("Graphics, Present and Compute queues retrieved");
 
-	////////////////////////////////////////////////////////////////////////////////
-	// Querying details of swap chain support
-	////////////////////////////////////////////////////////////////////////////////
-	const auto surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR( surface );
-	const std::vector<vk::SurfaceFormatKHR> availableFormats = m_physicalDevice.getSurfaceFormatsKHR( surface );
-	const std::vector<vk::PresentModeKHR> availablePresentModes = m_physicalDevice.getSurfacePresentModesKHR( surface );
 }

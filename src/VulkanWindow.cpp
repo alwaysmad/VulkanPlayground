@@ -22,3 +22,10 @@ VulkanWindow::~VulkanWindow()
 	if (window) glfwDestroyWindow(window);
 	LOG_DEBUG("Window and Surface destroyed");
 }
+
+vk::Extent2D VulkanWindow::getExtent() const
+{
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+	return vk::Extent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+}

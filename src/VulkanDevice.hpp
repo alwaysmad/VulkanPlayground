@@ -12,6 +12,7 @@ public:
 	const vk::raii::Queue& graphicsQueue() const { return m_graphicsQueue; }
 	const vk::raii::Queue& presentQueue() const { return m_presentQueue; }
 	const vk::raii::Queue& computeQueue() const { return m_computeQueue; }
+	const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
 
 private:
 	vk::raii::PhysicalDevice m_physicalDevice;
@@ -19,4 +20,8 @@ private:
 	vk::raii::Queue m_graphicsQueue;
 	vk::raii::Queue m_presentQueue;
 	vk::raii::Queue m_computeQueue;
+
+	uint32_t graphicsQueueIndex;
+	uint32_t presentQueueIndex;
+	uint32_t computeQueueIndex;
 };
