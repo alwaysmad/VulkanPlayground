@@ -6,9 +6,9 @@
 
 static constexpr std::array requiredDeviceExtensions = { 
 	vk::KHRSwapchainExtensionName,
-	vk::KHRSpirv14ExtensionName,
-	vk::KHRSynchronization2ExtensionName,
-	vk::KHRCreateRenderpass2ExtensionName
+	// vk::KHRSpirv14ExtensionName, // Core in Vulkan 1.2
+	// vk::KHRSynchronization2ExtensionName, // Core in Vulkan 1.3
+	// vk::KHRCreateRenderpass2ExtensionName // Core in Vulkan 1.2
 };
 
 VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::string& deviceName) :
@@ -38,14 +38,32 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	for (const auto& device : devices)
 		{ if ( device.getProperties().deviceName == deviceName ) m_physicalDevice = device; }
 
-	// If prefered device not found just grab the first one
-	if (*m_physicalDevice == nullptr)
+	// In debug build
+	if constexpr (enableValidationLayers)
 	{
-		m_physicalDevice = devices.front();
-		LOG_DEBUG("Could not find requested device: '" << deviceName << "'");
+		// If prefered device not found just grab the first one
+		if (*m_physicalDevice == nullptr)
+		{
+			m_physicalDevice = devices.front();
+			LOG_DEBUG("Could not find requested device: '" << deviceName << "'");
+		}
+		LOG_DEBUG("Selected device: '" << m_physicalDevice.getProperties().deviceName << "'");
 	}
-	LOG_DEBUG("Selected device: '"
-				<< m_physicalDevice.getProperties().deviceName << "'");	
+	// In release build
+	else
+	{
+		// If prefered device not found 
+		if (*m_physicalDevice == nullptr)
+		{
+			// Yell at user
+			std::cerr << "Could not find requested device: '" << deviceName << "')";
+			// Output a list of available devices
+			std::cerr << "Available Physical Devices (" << devices.size() << ") :";
+			for (const auto& device : devices) { std::cerr << "\t" << device.getProperties().deviceName; }
+			// Exit
+			throw std::runtime_error("Could not find requested device: '" + deviceName + "'");
+		}
+	}
 	
 	////////////////////////////////////////////////////////////////////////////////
 	// Check extentions and features and else

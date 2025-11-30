@@ -142,14 +142,14 @@ void VulkanSwapchain::createSwapchain()
                          ? std::numeric_limits<uint32_t>::max() 
                          : caps.maxImageCount;
 	// Target 3 images, but clamp to valid range
-	uint32_t imageCount = std::clamp(3u, caps.minImageCount, maxImages);	
+	const uint32_t imageCount = std::clamp(3u, caps.minImageCount, maxImages);	
 
 	// 4. Sharing Mode (Graphics vs Present queues)
-	uint32_t queueFamilyIndices[] = { m_device.getGraphicsQueueIndex(), m_device.getPresentQueueIndex() };
+	const uint32_t queueFamilyIndices[] = { m_device.getGraphicsQueueIndex(), m_device.getPresentQueueIndex() };
 
 	vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
 	uint32_t indexCount = 0;
-	uint32_t* pIndices = nullptr;
+	const uint32_t* pIndices = nullptr;
 
 	// If queue are different a more advanced logic is required
 	if (queueFamilyIndices[0] != queueFamilyIndices[1])
@@ -198,7 +198,7 @@ void VulkanSwapchain::createImageViews()
 
 	for (auto image : m_images)
 	{
-		vk::ImageViewCreateInfo createInfo {
+		const vk::ImageViewCreateInfo createInfo {
 			.image = image,
 			.viewType = vk::ImageViewType::e2D,
 			.format = m_imageFormat,

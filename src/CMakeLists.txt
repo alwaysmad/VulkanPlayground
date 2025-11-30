@@ -29,3 +29,14 @@ target_link_libraries(simplevk PRIVATE
 	Vulkan::Vulkan
 	glfw
 )
+
+# --- ADD THIS SECTION ---
+# Compile the shaders
+add_slang_shader_target(
+    CompileShaders
+    SOURCES ${CMAKE_SOURCE_DIR}/shaders/triangle.slang
+)
+
+# Force 'simplevk' to wait for 'CompileShaders' to finish
+add_dependencies(simplevk CompileShaders)
+# ------------------------

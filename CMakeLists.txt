@@ -68,5 +68,39 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(vulkan-hpp)
 
+# --- Find Slang Compiler ---
+find_program(SLANGC_EXECUTABLE slangc)
+if(NOT SLANGC_EXECUTABLE)
+    message(FATAL_ERROR "slangc not found! Please install Slang and add it to your PATH.")
+endif()
+message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
+
+# --- Define Shader Compilation Function ---
+function(add_slang_shader_target TARGET_NAME)
+    cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+
+    # Output to the same directory as the executable (bin)
+    set(OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(OUTPUT_FILE ${OUTPUT_DIR}/slang.spv)
+
+    # Hardcoded entry points for now (as per tutorial)
+    set(ENTRY_POINTS -entry vertMain -entry fragMain)
+
+    add_custom_command(
+        OUTPUT ${OUTPUT_FILE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
+        COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES}
+                -target spirv -profile spirv_1_4 -emit-spirv-directly
+                -fvk-use-entrypoint-name ${ENTRY_POINTS}
+                -o ${OUTPUT_FILE}
+        DEPENDS ${ARG_SOURCES}
+        COMMENT "Compiling Slang Shader: ${ARG_SOURCES}"
+        VERBATIM
+    )
+
+    # Create a custom target that triggers the command
+    add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_FILE})
+endfunction()
+
 # Add our "src" directory where the executable lives
 add_subdirectory(src)
