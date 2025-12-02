@@ -4,6 +4,8 @@
 #include <iostream>
 #include <array>
 
+static constexpr const char* engineName = {"SimpleVK"};
+
 static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validation" };
 
 std::ofstream VulkanInstance::logFile;
@@ -21,7 +23,7 @@ VulkanInstance::VulkanInstance(const std::string& appName, const GlfwContext& gl
 	const vk::ApplicationInfo appInfo {
 		.pApplicationName = appName.c_str(),
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-		.pEngineName = "No Engine",
+		.pEngineName = engineName,
 		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 		.apiVersion = vk::ApiVersion13 // 1.4 required ???
 	};

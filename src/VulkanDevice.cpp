@@ -11,6 +11,8 @@ static constexpr std::array requiredDeviceExtensions = {
 	// vk::KHRCreateRenderpass2ExtensionName // Core in Vulkan 1.2
 };
 
+static constexpr float queuePriority = 1.0f;
+
 VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface, const std::string& deviceName) :
 	m_physicalDevice(nullptr),
 	m_device(nullptr),
@@ -194,7 +196,6 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	const std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex };
 
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-	constexpr float queuePriority = 1.0f;
 
 	for (const auto& queueFamily : uniqueQueueFamilies)
 	{
