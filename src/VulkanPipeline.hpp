@@ -3,7 +3,6 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include <string>
-#include <vector>
 
 class VulkanDevice;
 class VulkanSwapchain;
@@ -23,6 +22,6 @@ public:
 private:
 	const VulkanDevice& m_device;
 
-	vk::raii::PipelineLayout m_pipelineLayout = nullptr;
-	vk::raii::Pipeline m_pipeline = nullptr;
+	vk::raii::PipelineLayout m_pipelineLayout;
+	vk::raii::Pipeline m_pipeline;
 };

@@ -9,6 +9,7 @@ target_sources(simplevk PRIVATE
 	VulkanWindow.cpp
 	VulkanDevice.cpp
 	VulkanSwapchain.cpp
+	VulkanPipeline.cpp
 	# Add new .cpp files here in the future
 	# MyNewFile.cpp
 	# MyOtherFile.cpp

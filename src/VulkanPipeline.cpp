@@ -29,8 +29,10 @@
 VulkanPipeline::VulkanPipeline(
 		const VulkanDevice& device,
 		const VulkanSwapchain& swapchain,
-		const std::string& shaderPath)
-	: m_device(device)
+		const std::string& shaderPath) :
+	m_device(device),
+	m_pipelineLayout(nullptr),
+	m_pipeline(nullptr)
 {
 	// 1. Load Shaders
 	vk::raii::ShaderModule shaderModule = loadShaderModule(m_device.device(), shaderPath);
@@ -46,8 +48,6 @@ VulkanPipeline::VulkanPipeline(
 			.module = shaderModule,
 			.pName = "fragMain" // Entry point from your Slang shader
 		}
-	};
-
 	};
 	// 3. Vertex input
 	vk::PipelineVertexInputStateCreateInfo vertexInputInfo { }; // Empty for now (hardcoded in shader)
@@ -103,40 +103,43 @@ VulkanPipeline::VulkanPipeline(
 	vk::PipelineDynamicStateCreateInfo dynamicStateInfo {
 		.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
 		.pDynamicStates = dynamicStates.data()
+	};
 	// 10. Pipeline Layout (Uniforms/Push Constants go here)
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
 		.setLayoutCount = 0,
 		.pushConstantRangeCount = 0
 	};
 	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
+	// 11. Dynamic Rendering Info (Vulkan 1.3)
+	vk::Format colorFormat = swapchain.getImageFormat();
 
-// 5. Dynamic Rendering Info (Vulkan 1.3)
-// This replaces the RenderPass!
-vk::Format colorFormat = swapchain.getImageFormat();
+	vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
+		.colorAttachmentCount = 1,
+		.pColorAttachmentFormats = &colorFormat,
+		.depthAttachmentFormat = vk::Format::eUndefined // No depth buffer yet
+	};
+	// 12. Create Pipeline
+	vk::GraphicsPipelineCreateInfo pipelineInfo {
+		.pNext = &pipelineRenderingInfo, // 11
+		.stageCount = 2,
+		.pStages = shaderStages, // 1, 2
+		.pVertexInputState = &vertexInputInfo, // 3
+		.pInputAssemblyState = &inputAssembly, // 4
+		.pViewportState = &viewportState, // 5
+		.pRasterizationState = &rasterizer, // 6
+		.pMultisampleState = &multisampling, // 7
+		.pColorBlendState = &colorBlending, // 8
+		.pDynamicState = &dynamicStateInfo, // 9
+		.layout = m_pipelineLayout, // 10
+		.renderPass = nullptr, // Must be null for dynamic rendering
+		.subpass = 0
+	};
 
-vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
-.colorAttachmentCount = 1,
-.pColorAttachmentFormats = &colorFormat,
-.depthAttachmentFormat = vk::Format::eUndefined // No depth buffer yet
-};
+	m_pipeline = device.device().createGraphicsPipeline(nullptr, pipelineInfo);
+	LOG_DEBUG("Graphics Pipeline created");
+}
 
-// 6. Create Pipeline
-vk::GraphicsPipelineCreateInfo pipelineInfo {
-.pNext = &pipelineRenderingInfo, // <--- LINK DYNAMIC RENDERING HERE
-.stageCount = 2,
-.pStages = shaderStages,
-.pVertexInputState = &vertexInputInfo,
-.pInputAssemblyState = &inputAssembly,
-.pViewportState = &viewportState,
-.pRasterizationState = &rasterizer,
-.pMultisampleState = &multisampling,
-.pColorBlendState = &colorBlending,
-.pDynamicState = &dynamicStateInfo,
-.layout = *m_pipelineLayout,
-.renderPass = nullptr, // Must be null for dynamic rendering
-.subpass = 0
-};
-
-m_pipeline = device.device().createGraphicsPipeline(nullptr, pipelineInfo);
-LOG_DEBUG("Graphics Pipeline created successfully");
+VulkanPipeline::~VulkanPipeline()
+{
+	LOG_DEBUG("Graphics Pipeline destroyed");
 }

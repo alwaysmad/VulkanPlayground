@@ -1,7 +1,7 @@
 #include "VulkanApplication.hpp"
 #include "DebugOutput.hpp"
 
-static constexpr std::string shaderPath = "slang.spv";
+static constexpr auto shaderPath = "slang.spv";
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),

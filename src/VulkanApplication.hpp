@@ -9,6 +9,7 @@
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
+#include "VulkanPipeline.hpp"
 
 class VulkanApplication
 {
@@ -19,6 +20,7 @@ private:
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
 	VulkanSwapchain vulkanSwapchain;
+	VulkanPipeline vulkanPipeline;
 public:
 	/*
 	 * Constructor
