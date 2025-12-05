@@ -75,14 +75,17 @@ if(NOT SLANGC_EXECUTABLE)
 endif()
 message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
 
-# --- Define Shader Compilation Function (Embed Version) ---
+# --- Define Shader Compilation Function (Modern Embed Version) ---
 function(add_slang_shader_target TARGET_NAME)
     cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
     
-    # Place generated files in the build directory for this source
+    # Get the source filename without extension (e.g., "triangle")
+    list(GET ARG_SOURCES 0 MAIN_SOURCE)
+    get_filename_component(SHADER_NAME ${MAIN_SOURCE} NAME_WE)
+
     set(WORK_DIR ${CMAKE_CURRENT_BINARY_DIR})
-    set(OUTPUT_SPV ${WORK_DIR}/slang.spv)
-    set(OUTPUT_HEADER ${WORK_DIR}/slang_spv.h)
+    set(OUTPUT_SPV ${WORK_DIR}/${SHADER_NAME}.spv)
+    set(OUTPUT_HEADER ${WORK_DIR}/${SHADER_NAME}.hpp)
 
     set(ENTRY_POINTS -entry vertMain -entry fragMain)
 
@@ -93,14 +96,16 @@ function(add_slang_shader_target TARGET_NAME)
                 -target spirv -profile spirv_1_4 -emit-spirv-directly 
                 -fvk-use-entrypoint-name ${ENTRY_POINTS} 
                 -o ${OUTPUT_SPV}
-        # 2. Embed SPV -> Header
-        # We cd into the directory first so xxd generates clean names (slang_spv)
-        # instead of full path names (_home_user_...)
-        COMMAND sh -c "cd '${WORK_DIR}' && xxd -i slang.spv > slang_spv.h"
         
-        DEPENDS ${ARG_SOURCES}
-        COMMENT "Compiling and Embedding Slang Shader"
-        VERBATIM
+        # 2. Embed SPV -> C++ Header (using our script)
+        COMMAND ${CMAKE_COMMAND} 
+                -DINPUT_FILE=${OUTPUT_SPV} 
+                -DOUTPUT_FILE=${OUTPUT_HEADER} 
+                -DNAMESPACE=${SHADER_NAME}
+                -P ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
+        
+        DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
+        COMMENT "Compiling and Embedding Slang Shader: ${SHADER_NAME}"
     )
 
     add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_HEADER})

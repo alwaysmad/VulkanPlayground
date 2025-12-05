@@ -3,14 +3,14 @@
 #include "VulkanSwapchain.hpp"
 #include "DebugOutput.hpp"
 
-#include "slang_spv.h" // The generated header
+#include "triangle.hpp" // The generated header
 
 [[nodiscard]] inline static vk::raii::ShaderModule createShaderModule(
 		const vk::raii::Device& device,
 		const unsigned char* data,
-		unsigned int len)
+		size_t len)
 {
-	vk::ShaderModuleCreateInfo createInfo {
+	const vk::ShaderModuleCreateInfo createInfo {
 		.codeSize = len,
 		.pCode = reinterpret_cast<const uint32_t*>(data)
 	};
@@ -25,9 +25,9 @@ VulkanPipeline::VulkanPipeline(
 	m_pipeline(nullptr)
 {
 	// 1. Load Shaders
-	vk::raii::ShaderModule shaderModule = createShaderModule(m_device.device(), slang_spv, slang_spv_len);
+	const vk::raii::ShaderModule shaderModule = createShaderModule(m_device.device(), triangle::code, triangle::size);
 	// 2. Shader Stages
-	vk::PipelineShaderStageCreateInfo shaderStages[] = {
+	const vk::PipelineShaderStageCreateInfo shaderStages[] = {
 		{
 			.stage = vk::ShaderStageFlagBits::eVertex,
 			.module = shaderModule,
@@ -40,19 +40,19 @@ VulkanPipeline::VulkanPipeline(
 		}
 	};
 	// 3. Vertex input
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo { }; // Empty for now (hardcoded in shader)
+	constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo { }; // Empty for now (hardcoded in shader)
 	// 4. Input assembly
-	vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
+	constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
 		.topology = vk::PrimitiveTopology::eTriangleList,
 		.primitiveRestartEnable = vk::False
 	};
 	// 5. Viewport
-	vk::PipelineViewportStateCreateInfo viewportState {
+	constexpr vk::PipelineViewportStateCreateInfo viewportState {
 		.viewportCount = 1,
 		.scissorCount = 1
 	};
 	// 6. Rasterizer
-	vk::PipelineRasterizationStateCreateInfo rasterizer {
+	constexpr vk::PipelineRasterizationStateCreateInfo rasterizer {
 		.depthClampEnable = vk::False,
 		.rasterizerDiscardEnable = vk::False,
 		.polygonMode = vk::PolygonMode::eFill,
@@ -63,12 +63,12 @@ VulkanPipeline::VulkanPipeline(
 		.lineWidth = 1.0f
 	};
 	// 7. Multisampling
-	vk::PipelineMultisampleStateCreateInfo multisampling {
+	constexpr vk::PipelineMultisampleStateCreateInfo multisampling {
 		.rasterizationSamples = vk::SampleCountFlagBits::e1,
 		.sampleShadingEnable = vk::False
 	};
 	// 8. Color blending
-	vk::PipelineColorBlendAttachmentState colorBlendAttachment {
+	constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachment {
 		.blendEnable = vk::False,
 		.colorWriteMask
 			= vk::ColorComponentFlagBits::eR
@@ -77,11 +77,11 @@ VulkanPipeline::VulkanPipeline(
 			| vk::ColorComponentFlagBits::eA
 	};
 
-	vk::PipelineColorBlendStateCreateInfo colorBlending {
+	constexpr vk::PipelineColorBlendStateCreateInfo colorBlending {
 		.logicOpEnable = vk::False,
 		.logicOp =  vk::LogicOp::eCopy,
 		.attachmentCount = 1,
-		.pAttachments =  &colorBlendAttachment
+		.pAttachments = &colorBlendAttachment
 	};
 	// 9. Fixed Function State
 	// Dynamic States allow us to resize window without recreating pipeline

@@ -2,8 +2,6 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
-#include <string>
-
 class VulkanDevice;
 class VulkanSwapchain;
 
