@@ -85,9 +85,12 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	// check features
 	const auto features = m_physicalDevice.template getFeatures2<
 		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan11Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT >();
-
+	
+	if (!features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters)
+		{ throw std::runtime_error("Selected device does not support shader draw parameters"); }
 	if (!features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering)
 		{ throw std::runtime_error("Selected device does not support dynamic Rendering feature"); }
 	if (!features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState)
@@ -213,11 +216,15 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	// Create a chain of feature structures
 	const vk::StructureChain<
 		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan11Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
 	> featureChain = {
 		// Core Features 1.0 (Enable samplerAnisotropy if needed)
 		{ .features = { .samplerAnisotropy = vk::True } },
+
+		// Vulkan 1.1 Features
+		{ .shaderDrawParameters = vk::True },
 
 		// Vulkan 1.3 Features
 		{ .dynamicRendering = vk::True },

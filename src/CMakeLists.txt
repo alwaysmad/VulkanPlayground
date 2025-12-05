@@ -24,6 +24,8 @@ target_compile_definitions(simplevk PRIVATE
 
 target_include_directories(simplevk PRIVATE
 	${vulkan-hpp_BINARY_DIR}
+    # Add this! This tells the compiler to look in 'build/src' for headers
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 target_link_libraries(simplevk PRIVATE 

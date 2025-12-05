@@ -11,8 +11,7 @@ class VulkanPipeline
 {
 public:
 	VulkanPipeline(const VulkanDevice&, 
-			const VulkanSwapchain&, 
-			const std::string&);
+			const VulkanSwapchain&);
 
 	~VulkanPipeline();
 

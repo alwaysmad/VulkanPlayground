@@ -1,8 +1,6 @@
 #include "VulkanApplication.hpp"
 #include "DebugOutput.hpp"
 
-static constexpr std::string shaderPath = "slang.spv";
-
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),
 	glfwContext(),
@@ -10,7 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanWindow(vulkanInstance.getInstance(), w, h, appName),
 	vulkanDevice(vulkanInstance.getInstance(), vulkanWindow.getSurface(), DeviceName),
 	vulkanSwapchain(vulkanDevice, vulkanWindow),
-	vulkanPipeline(vulkanDevice, vulkanSwapchain, shaderPath)
+	vulkanPipeline(vulkanDevice, vulkanSwapchain)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);

@@ -2,40 +2,30 @@
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
 #include "DebugOutput.hpp"
-#include <fstream>
 
-[[nodiscard]] inline static vk::raii::ShaderModule loadShaderModule(
+#include "slang_spv.h" // The generated header
+
+[[nodiscard]] inline static vk::raii::ShaderModule createShaderModule(
 		const vk::raii::Device& device,
-		const std::string& filename )
+		const unsigned char* data,
+		unsigned int len)
 {
-	// 1. Open file
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-	if (!file.is_open()) { throw std::runtime_error("Failed to open shader file: " + filename); }
-	// 2. Read file size
-	const size_t fileSize = file.tellg();
-	// 3. Read data
-	std::vector<char> buffer(fileSize);
-	file.seekg(0, std::ios::beg);
-	file.read(buffer.data(), fileSize);
-	file.close();
-	// 4. Create Shader Module
-	const vk::ShaderModuleCreateInfo createInfo {
-		.codeSize = fileSize * sizeof(char),
-		.pCode = reinterpret_cast<const uint32_t*>(buffer.data())
+	vk::ShaderModuleCreateInfo createInfo {
+		.codeSize = len,
+		.pCode = reinterpret_cast<const uint32_t*>(data)
 	};
-	return vk::raii::ShaderModule{ device, createInfo };
-}
+	return vk::raii::ShaderModule(device, createInfo);
+} 
 
 VulkanPipeline::VulkanPipeline(
 		const VulkanDevice& device,
-		const VulkanSwapchain& swapchain,
-		const std::string& shaderPath) :
+		const VulkanSwapchain& swapchain) :
 	m_device(device),
 	m_pipelineLayout(nullptr),
 	m_pipeline(nullptr)
 {
 	// 1. Load Shaders
-	vk::raii::ShaderModule shaderModule = loadShaderModule(m_device.device(), shaderPath);
+	vk::raii::ShaderModule shaderModule = createShaderModule(m_device.device(), slang_spv, slang_spv_len);
 	// 2. Shader Stages
 	vk::PipelineShaderStageCreateInfo shaderStages[] = {
 		{

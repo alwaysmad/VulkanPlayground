@@ -75,31 +75,35 @@ if(NOT SLANGC_EXECUTABLE)
 endif()
 message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
 
-# --- Define Shader Compilation Function ---
+# --- Define Shader Compilation Function (Embed Version) ---
 function(add_slang_shader_target TARGET_NAME)
     cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+    
+    # Place generated files in the build directory for this source
+    set(WORK_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    set(OUTPUT_SPV ${WORK_DIR}/slang.spv)
+    set(OUTPUT_HEADER ${WORK_DIR}/slang_spv.h)
 
-    # Output to the same directory as the executable (bin)
-    set(OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-    set(OUTPUT_FILE ${OUTPUT_DIR}/slang.spv)
-
-    # Hardcoded entry points for now (as per tutorial)
     set(ENTRY_POINTS -entry vertMain -entry fragMain)
 
     add_custom_command(
-        OUTPUT ${OUTPUT_FILE}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
-        COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES}
-                -target spirv -profile spirv_1_4 -emit-spirv-directly
-                -fvk-use-entrypoint-name ${ENTRY_POINTS}
-                -o ${OUTPUT_FILE}
+        OUTPUT ${OUTPUT_HEADER}
+        # 1. Compile Slang -> SPV
+        COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES} 
+                -target spirv -profile spirv_1_4 -emit-spirv-directly 
+                -fvk-use-entrypoint-name ${ENTRY_POINTS} 
+                -o ${OUTPUT_SPV}
+        # 2. Embed SPV -> Header
+        # We cd into the directory first so xxd generates clean names (slang_spv)
+        # instead of full path names (_home_user_...)
+        COMMAND sh -c "cd '${WORK_DIR}' && xxd -i slang.spv > slang_spv.h"
+        
         DEPENDS ${ARG_SOURCES}
-        COMMENT "Compiling Slang Shader: ${ARG_SOURCES}"
+        COMMENT "Compiling and Embedding Slang Shader"
         VERBATIM
     )
 
-    # Create a custom target that triggers the command
-    add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_FILE})
+    add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_HEADER})
 endfunction()
 
 # Add our "src" directory where the executable lives
