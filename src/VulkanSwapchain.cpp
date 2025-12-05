@@ -196,7 +196,7 @@ void VulkanSwapchain::createImageViews()
 {
 	m_imageViews.clear(); // Clear old views if recreating
 
-	for (auto image : m_images)
+	for (const auto& image : m_images)
 	{
 		const vk::ImageViewCreateInfo createInfo {
 			.image = image,

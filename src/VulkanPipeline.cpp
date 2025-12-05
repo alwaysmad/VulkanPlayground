@@ -68,7 +68,7 @@ VulkanPipeline::VulkanPipeline(
 		.sampleShadingEnable = vk::False
 	};
 	// 8. Color blending
-	constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachment {
+	static constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachment {
 		.blendEnable = vk::False,
 		.colorWriteMask
 			= vk::ColorComponentFlagBits::eR
@@ -85,31 +85,31 @@ VulkanPipeline::VulkanPipeline(
 	};
 	// 9. Fixed Function State
 	// Dynamic States allow us to resize window without recreating pipeline
-	std::vector<vk::DynamicState> dynamicStates = {
+	static constexpr std::array<vk::DynamicState, 2> dynamicStates = {
 		vk::DynamicState::eViewport,
 		vk::DynamicState::eScissor
 	};
 
-	vk::PipelineDynamicStateCreateInfo dynamicStateInfo {
+	constexpr vk::PipelineDynamicStateCreateInfo dynamicStateInfo {
 		.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
 		.pDynamicStates = dynamicStates.data()
 	};
 	// 10. Pipeline Layout (Uniforms/Push Constants go here)
-	vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
+	constexpr vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
 		.setLayoutCount = 0,
 		.pushConstantRangeCount = 0
 	};
 	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
 	// 11. Dynamic Rendering Info (Vulkan 1.3)
-	vk::Format colorFormat = swapchain.getImageFormat();
+	const vk::Format colorFormat = swapchain.getImageFormat();
 
-	vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
+	const vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
 		.colorAttachmentCount = 1,
 		.pColorAttachmentFormats = &colorFormat,
 		.depthAttachmentFormat = vk::Format::eUndefined // No depth buffer yet
 	};
 	// 12. Create Pipeline
-	vk::GraphicsPipelineCreateInfo pipelineInfo {
+	const vk::GraphicsPipelineCreateInfo pipelineInfo {
 		.pNext = &pipelineRenderingInfo, // 11
 		.stageCount = 2,
 		.pStages = shaderStages, // 1, 2
