@@ -8,6 +8,7 @@
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
+#include "VulkanSync.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "VulkanCommand.hpp"
@@ -22,6 +23,7 @@ private:
 	VulkanDevice vulkanDevice;
 	VulkanSwapchain vulkanSwapchain;
 	VulkanPipeline vulkanPipeline;
+	VulkanSync vulkanSync;
 	VulkanCommand vulkanCommand;
 public:
 	/*

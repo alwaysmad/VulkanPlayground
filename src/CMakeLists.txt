@@ -8,6 +8,7 @@ target_sources(simplevk PRIVATE
 	VulkanInstance.cpp
 	VulkanWindow.cpp
 	VulkanDevice.cpp
+	VulkanSync.cpp
 	VulkanSwapchain.cpp
 	VulkanPipeline.cpp
 	VulkanCommand.cpp

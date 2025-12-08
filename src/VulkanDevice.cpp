@@ -91,6 +91,8 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	
 	if (!features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters)
 		{ throw std::runtime_error("Selected device does not support shader draw parameters"); }
+	if (!features.template get<vk::PhysicalDeviceVulkan13Features>().synchronization2)
+		{ throw std::runtime_error("Selected device does not support synchronization2"); }
 	if (!features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering)
 		{ throw std::runtime_error("Selected device does not support dynamic Rendering feature"); }
 	if (!features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState)
@@ -227,7 +229,10 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 		{ .shaderDrawParameters = vk::True },
 
 		// Vulkan 1.3 Features
-		{ .dynamicRendering = vk::True },
+		{
+			.synchronization2 = vk::True,
+			.dynamicRendering = vk::True
+		},
 
 		// Extended Dynamic State
 		{ .extendedDynamicState = vk::True }
