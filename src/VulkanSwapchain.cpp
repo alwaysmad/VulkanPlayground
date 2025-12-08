@@ -134,7 +134,7 @@ void VulkanSwapchain::createSwapchain()
 
 	// 3. Image Count
 	// 0 means unlimited
-	uint32_t maxImages = (caps.maxImageCount == 0) 
+	const uint32_t maxImages = (caps.maxImageCount == 0) 
                          ? std::numeric_limits<uint32_t>::max() 
                          : caps.maxImageCount;
 	// Target 3 images, but clamp to valid range
@@ -147,7 +147,7 @@ void VulkanSwapchain::createSwapchain()
 	uint32_t indexCount = 0;
 	const uint32_t* pIndices = nullptr;
 
-	// If queue are different a more advanced logic is required
+	// If queues are different a more advanced logic is required
 	if (queueFamilyIndices[0] != queueFamilyIndices[1])
 	{
 		sharingMode = vk::SharingMode::eConcurrent;
@@ -217,4 +217,3 @@ void VulkanSwapchain::createImageViews()
 		m_imageViews.emplace_back(m_device.device(), createInfo);
 	}
 }
-

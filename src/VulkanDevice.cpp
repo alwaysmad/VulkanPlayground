@@ -214,7 +214,7 @@ VulkanDevice::VulkanDevice(const vk::raii::Instance& instance, const vk::raii::S
 	// Create Logical Device
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a chain of feature structures
-	static const vk::StructureChain<
+	const vk::StructureChain<
 		vk::PhysicalDeviceFeatures2,
 		vk::PhysicalDeviceVulkan11Features,
 		vk::PhysicalDeviceVulkan13Features,

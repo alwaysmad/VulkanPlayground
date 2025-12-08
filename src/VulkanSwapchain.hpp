@@ -20,7 +20,7 @@ public:
 	inline const vk::Format& getImageFormat() const { return m_imageFormat; }
 	inline const vk::Extent2D& getExtent() const { return m_extent; }
 	inline const std::vector<vk::raii::ImageView>& getImageViews() const { return m_imageViews; }
-
+	inline const std::vector<vk::Image>& getImages() const { return m_images; }
 private:
 	// We keep references to dependencies so we can recreate() later
 	const VulkanDevice& m_device;

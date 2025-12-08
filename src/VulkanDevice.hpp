@@ -20,6 +20,7 @@ public:
 private:
 	vk::raii::PhysicalDevice m_physicalDevice;
 	vk::raii::Device m_device;
+
 	vk::raii::Queue m_graphicsQueue;
 	vk::raii::Queue m_presentQueue;
 	vk::raii::Queue m_computeQueue;

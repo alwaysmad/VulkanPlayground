@@ -8,7 +8,8 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanWindow(vulkanInstance.getInstance(), w, h, appName),
 	vulkanDevice(vulkanInstance.getInstance(), vulkanWindow.getSurface(), DeviceName),
 	vulkanSwapchain(vulkanDevice, vulkanWindow),
-	vulkanPipeline(vulkanDevice, vulkanSwapchain)
+	vulkanPipeline(vulkanDevice, vulkanSwapchain),
+	vulkanCommand(vulkanDevice, vulkanSwapchain, vulkanPipeline)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);
