@@ -36,7 +36,7 @@ VulkanPipeline::VulkanPipeline(
 		{
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.module = shaderModule,
-			.pName = "fragMain" // Entry point from your Slang shader
+			.pName = "fragMain" // Entry point from Slang shader
 		}
 	};
 	// 3. Vertex input

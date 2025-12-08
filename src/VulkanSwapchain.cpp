@@ -96,10 +96,6 @@ void VulkanSwapchain::createSwapchain()
 	////////////////////////////////////////////////////////////////////////////////
 	// Logging details of swap chain support
 	////////////////////////////////////////////////////////////////////////////////
-	// const auto surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR( surface );
-	// const std::vector<vk::SurfaceFormatKHR> availableFormats = m_physicalDevice.getSurfaceFormatsKHR( surface );
-	//const std::vector<vk::PresentModeKHR> availablePresentModes = m_physicalDevice.getSurfacePresentModesKHR( surface );
-
 	if constexpr (enableValidationLayers)
 	{
 		LOG_DEBUG("Surface Capabilities:");
