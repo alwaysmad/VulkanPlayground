@@ -41,6 +41,7 @@ void VulkanRender::recordDraw (uint32_t bufferIndex, uint32_t imageIndex, const 
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
 	const auto& extent = m_swapchain.getExtent();
+	const auto& scale = m_swapchain.getScale();
 	// 1. Begin
 	cmd.reset();
 	cmd.begin({ .flags = {} });
@@ -72,7 +73,7 @@ void VulkanRender::recordDraw (uint32_t bufferIndex, uint32_t imageIndex, const 
 	// -------------------------------------------------------------------------
 	// Rendering Info (Dynamic Rendering)
 	// -------------------------------------------------------------------------
-	const vk::ClearValue clearColor {
+	constexpr vk::ClearValue clearColor {
 		.color = { std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f} }
 	};
 	const vk::RenderingAttachmentInfo colorAttachment {
@@ -107,6 +108,15 @@ void VulkanRender::recordDraw (uint32_t bufferIndex, uint32_t imageIndex, const 
 		.extent = extent
 	};
 	cmd.setScissor(0, scissor);
+
+	// --- Push the Array ---
+	// The template argument <std::array<float, 2>> ensures the size is correct
+	cmd.pushConstants<std::array<float, 2>> (
+			*pipeline.getLayout(),
+			vk::ShaderStageFlagBits::eVertex,
+			0,
+			scale
+	);
 
 	// Draw 3 vertices (Triangle)
 	cmd.draw(3, 1, 0, 0);

@@ -49,7 +49,6 @@ VulkanSwapchain::VulkanSwapchain(const VulkanDevice& device, const VulkanWindow&
 	m_swapchain(nullptr)
 {
 	createSwapchain();
-	m_imageViews.reserve(m_images.size());
 	createImageViews();
 	LOG_DEBUG("VulkanSwapchain instance created");
 }
@@ -181,7 +180,14 @@ void VulkanSwapchain::createSwapchain()
 	// 7. Store attributes
 	m_imageFormat = surfaceFormat.format;
 	m_extent = extent;
-    
+	if (m_extent.height > 0 && m_extent.width > 0)
+	{
+		const float max = static_cast<float>( std::max(m_extent.width, m_extent.height) );
+		m_scale[0] = static_cast<float>(m_extent.width) / max;
+		m_scale[1] = static_cast<float>(m_extent.height) / max;
+	}
+	else
+		{ m_scale[0] = 1.0f; m_scale[1] = 1.0f; }
 	// 8. Get Images (Raw handles, not RAII)
 	m_images = m_swapchain.getImages();
     

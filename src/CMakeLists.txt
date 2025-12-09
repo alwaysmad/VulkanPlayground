@@ -47,6 +47,8 @@ target_precompile_headers(simplevk PRIVATE
 	<set>
 	<string>
 	<fstream>
+	<limits>
+	<algorithm>
 )
 
 # Compile the shaders

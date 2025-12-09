@@ -5,6 +5,8 @@
 
 #include "triangle.hpp" // The generated header
 
+static constexpr auto  pushConstantSize = 2 * sizeof(float); 
+
 [[nodiscard]] inline static vk::raii::ShaderModule createShaderModule(
 		const vk::raii::Device& device,
 		const unsigned char* data,
@@ -89,15 +91,20 @@ VulkanPipeline::VulkanPipeline(
 		vk::DynamicState::eViewport,
 		vk::DynamicState::eScissor
 	};
-
 	constexpr vk::PipelineDynamicStateCreateInfo dynamicStateInfo {
 		.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
 		.pDynamicStates = dynamicStates.data()
 	};
 	// 10. Pipeline Layout (Uniforms/Push Constants go here)
+	static constexpr vk::PushConstantRange pushConstantRange {
+		.stageFlags = vk::ShaderStageFlagBits::eVertex,
+		.offset = 0,
+		.size = pushConstantSize
+	};
 	constexpr vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
 		.setLayoutCount = 0,
-		.pushConstantRangeCount = 0
+		.pushConstantRangeCount = 1,
+		.pPushConstantRanges = &pushConstantRange
 	};
 	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
 	// 11. Dynamic Rendering Info (Vulkan 1.3)

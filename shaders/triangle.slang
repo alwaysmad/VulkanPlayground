@@ -1,3 +1,13 @@
+// 1. Define the Push Constant Block
+struct PushConstants
+{
+	float2 scale;
+}
+
+// 2. Register it
+[[vk::push_constant]]
+PushConstants pc;
+
 static float2 positions[3] = float2[]
 (
 	float2(0.0, -0.5),
@@ -22,7 +32,7 @@ struct VertexOutput
 VertexOutput vertMain(uint vid : SV_VertexID)
 {
 	VertexOutput output;
-	output.sv_position = float4(positions[vid], 0.0, 1.0);
+	output.sv_position = float4(positions[vid] * pc.scale, 0.0, 1.0);
 	output.color = colors[vid];
 	return output;
 }
