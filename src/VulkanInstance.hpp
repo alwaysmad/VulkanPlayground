@@ -1,6 +1,5 @@
 // src/VulkanInstance.hpp
 #pragma once
-#define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp> // For everything Vulkan
 #include "GlfwContext.hpp"
 #include <vector>

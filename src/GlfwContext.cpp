@@ -2,7 +2,6 @@
 #include "GlfwContext.hpp"
 #include <stdexcept>
 #include "DebugOutput.hpp"
-#define GLFW_INCLUDE_VULKAN // REQUIRED only for GLFW CreateWindowSurface.
 #include <GLFW/glfw3.h>
 
 GlfwContext::GlfwContext()

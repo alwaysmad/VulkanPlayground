@@ -1,7 +1,6 @@
 // src/VulkanWindow.hpp
 #pragma once
 #include <vulkan/vulkan_raii.hpp>
-#define GLFW_INCLUDE_VULKAN // REQUIRED only for GLFW CreateWindowSurface.
 #include <GLFW/glfw3.h>
 #include <string>
 

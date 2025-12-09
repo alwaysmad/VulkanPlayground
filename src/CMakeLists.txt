@@ -14,20 +14,21 @@ target_sources(simplevk PRIVATE
 	VulkanRender.cpp
 	# Add new .cpp files here in the future
 	# MyNewFile.cpp
-	# MyOtherFile.cpp
 )
 
 # 3. Add the compile definition
 target_compile_definitions(simplevk PRIVATE
-    # This line adds -DENABLE_DEBUG_LOGGING *only* when 
-    # CMAKE_BUILD_TYPE is "Debug"
-    $<$<CONFIG:Debug>:ENABLE_DEBUG_LOGGING>
+	# This line adds -DENABLE_DEBUG_LOGGING *only* when 
+	# CMAKE_BUILD_TYPE is "Debug"
+	$<$<CONFIG:Debug>:ENABLE_DEBUG_LOGGING>
+	# These will now apply to PCH and every source file automatically
+    	VULKAN_HPP_NO_CONSTRUCTORS
+    	GLFW_INCLUDE_VULKAN
 )
 
 target_include_directories(simplevk PRIVATE
 	${vulkan-hpp_BINARY_DIR}
-    # Add this! This tells the compiler to look in 'build/src' for headers
-    ${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_BINARY_DIR}
 )
 
 target_link_libraries(simplevk PRIVATE 
@@ -35,11 +36,23 @@ target_link_libraries(simplevk PRIVATE
 	glfw
 )
 
-# --- ADD THIS SECTION ---
+target_precompile_headers(simplevk PRIVATE
+	<vulkan/vulkan_raii.hpp>
+	<GLFW/glfw3.h>
+	<vector>
+	<array>
+	<iostream>
+	<stdexcept>
+	<cstdlib>
+	<set>
+	<string>
+	<fstream>
+)
+
 # Compile the shaders
 add_slang_shader_target(
-    CompileShaders
-    SOURCES ${CMAKE_SOURCE_DIR}/shaders/triangle.slang
+	CompileShaders
+	SOURCES ${CMAKE_SOURCE_DIR}/shaders/triangle.slang
 )
 
 # Force 'simplevk' to wait for 'CompileShaders' to finish
