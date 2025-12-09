@@ -2,7 +2,7 @@
 struct PushConstants
 {
 	float2 scale;
-}
+};
 
 // 2. Register it
 [[vk::push_constant]]
@@ -10,9 +10,9 @@ PushConstants pc;
 
 static float2 positions[3] = float2[]
 (
-	float2(0.0, -0.5),
-	float2(0.5, 0.5),
-	float2(-0.5, 0.5)
+	float2(0.0, 1.0),
+	float2(0.0, 0.0),
+	float2(1.0, 0.0)
 );
 
 static float3 colors[3] = float3[]
