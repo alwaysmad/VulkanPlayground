@@ -1,14 +1,11 @@
-#include "VulkanCommand.hpp"
+#include "VulkanRender.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "DebugOutput.hpp"
 
-VulkanCommand::VulkanCommand(const VulkanDevice& device, 
-                             const VulkanSwapchain& swapchain, 
-                             const VulkanPipeline& pipeline)
+VulkanRender::VulkanRender(const VulkanDevice& device, const VulkanSwapchain& swapchain)
 	: m_swapchain(swapchain),
-	  m_pipeline(pipeline),
 	  // 1. Create Pool
 	  m_commandPool(
 		  device.device(),
@@ -29,16 +26,16 @@ VulkanCommand::VulkanCommand(const VulkanDevice& device,
 	  )
 {
 	LOG_DEBUG("Command Pool created and " << m_commandBuffers.size() << " buffers allocated");
-	LOG_DEBUG("VulkanCommand created");
+	LOG_DEBUG("VulkanRender created");
 }
 
-VulkanCommand::~VulkanCommand()
+VulkanRender::~VulkanRender()
 {
 	// Destruction handled by RAII objects in m_commandBuffers and m_commandPool
-	LOG_DEBUG("VulkanCommand destroyed");
+	LOG_DEBUG("VulkanRender destroyed");
 }
 
-void VulkanCommand::recordDraw (size_t bufferIndex, size_t imageIndex)
+void VulkanRender::recordDraw (uint32_t bufferIndex, uint32_t imageIndex, const VulkanPipeline& pipeline)
 {
 	const auto& cmd = m_commandBuffers[bufferIndex];
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
@@ -95,7 +92,7 @@ void VulkanCommand::recordDraw (size_t bufferIndex, size_t imageIndex)
 	// -------------------------------------------------------------------------
 	// Draw Commands
 	// -------------------------------------------------------------------------
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline.getPipeline());
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline.getPipeline());
 	// Dynamic State: Viewport & Scissor
 	const vk::Viewport viewport {
 		.x = 0.0f, .y = 0.0f,

@@ -11,7 +11,7 @@ target_sources(simplevk PRIVATE
 	VulkanSync.cpp
 	VulkanSwapchain.cpp
 	VulkanPipeline.cpp
-	VulkanCommand.cpp
+	VulkanRender.cpp
 	# Add new .cpp files here in the future
 	# MyNewFile.cpp
 	# MyOtherFile.cpp

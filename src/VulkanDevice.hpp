@@ -3,10 +3,13 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+class VulkanInstance;
+class VulkanWindow;
+
 class VulkanDevice
 {
 public:
-	VulkanDevice(const vk::raii::Instance&, const vk::raii::SurfaceKHR&, const std::string&);
+	VulkanDevice(const VulkanInstance&, const VulkanWindow&, const std::string&);
 
 	inline const vk::raii::Device& device() const { return m_device; }
 	inline const vk::raii::Queue& graphicsQueue() const { return m_graphicsQueue; }

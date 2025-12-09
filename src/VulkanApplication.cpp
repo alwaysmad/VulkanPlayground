@@ -7,12 +7,12 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	appName(AppName),
 	glfwContext(),
 	vulkanInstance(appName, glfwContext),
-	vulkanWindow(vulkanInstance.getInstance(), w, h, appName),
-	vulkanDevice(vulkanInstance.getInstance(), vulkanWindow.getSurface(), DeviceName),
+	vulkanWindow(vulkanInstance, w, h, appName),
+	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
 	vulkanSwapchain(vulkanDevice, vulkanWindow),
 	vulkanPipeline(vulkanDevice, vulkanSwapchain),
-	vulkanSync(vulkanDevice, MAX_FRAMES_IN_FLIGHT, vulkanSwapchain.getImages().size()),
-	vulkanCommand(vulkanDevice, vulkanSwapchain, vulkanPipeline)
+	vulkanSync(vulkanDevice, VulkanRender::MAX_FRAMES_IN_FLIGHT, vulkanSwapchain.getImages().size()),
+	vulkanRender(vulkanDevice, vulkanSwapchain)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);
@@ -28,7 +28,7 @@ int VulkanApplication::run()
 	LOG_DEBUG("VulkanApplication instance started run()");
 
 	// Frame counter
-	size_t currentFrame = 0;
+	uint32_t currentFrame = 0;
 	
 	while (!vulkanWindow.shouldClose())
 	{
@@ -45,7 +45,7 @@ int VulkanApplication::run()
 		// This semaphore signals when the image is actually ready to be drawn to
 		auto& imageAvailableSem = vulkanSync.getImageAvailableSemaphore(currentFrame);
 
-		vk::AcquireNextImageInfoKHR acquireInfo {
+		const vk::AcquireNextImageInfoKHR acquireInfo {
 			.swapchain = *vulkanSwapchain.getSwapchain(),
 			.timeout = timeout,
 			.semaphore = *imageAvailableSem,
@@ -58,17 +58,14 @@ int VulkanApplication::run()
 			const auto result = vulkanDevice.device().acquireNextImage2KHR(acquireInfo);
 			imageIndex = result.second;
 		} 
-		catch (const vk::OutOfDateKHRError&) {
-			vulkanSwapchain.recreate();
-			vulkanSync.refresh(vulkanSwapchain.getImages().size());
-			continue;
-		}	
+		catch (const vk::OutOfDateKHRError&)
+			{ refreshSwapchain(); continue; }
 
 		// Only reset the fence if we are actually submitting work
 		vulkanDevice.device().resetFences({*fence});
 
 		// 3. Record Commands
-		vulkanCommand.recordDraw(currentFrame, imageIndex);
+		vulkanRender.recordDraw(currentFrame, imageIndex, vulkanPipeline);
 
 		// 4. Submit to Graphics Queue
 		auto& renderFinishedSem = vulkanSync.getRenderFinishedSemaphore(imageIndex);
@@ -79,7 +76,7 @@ int VulkanApplication::run()
 			.pWaitSemaphores = &*imageAvailableSem,
 			.pWaitDstStageMask = &waitStages,
 			.commandBufferCount = 1,
-			.pCommandBuffers = &*vulkanCommand.getBuffer(currentFrame),
+			.pCommandBuffers = &*vulkanRender.getBuffer(currentFrame),
 			.signalSemaphoreCount = 1,
 			.pSignalSemaphores = &*renderFinishedSem
 		};
@@ -96,15 +93,13 @@ int VulkanApplication::run()
 		};
 
 		try {
-			auto result = vulkanDevice.presentQueue().presentKHR(presentInfo);
-			if (result == vk::Result::eSuboptimalKHR) { vulkanSwapchain.recreate(); }
+			const auto result = vulkanDevice.presentQueue().presentKHR(presentInfo);
+			if (result == vk::Result::eSuboptimalKHR) { refreshSwapchain(); }
 		}
-		catch (const vk::OutOfDateKHRError&) {
-			vulkanSwapchain.recreate();
-			vulkanSync.refresh(vulkanSwapchain.getImages().size());
-		}
+		catch (const vk::OutOfDateKHRError&) 
+			{ refreshSwapchain(); continue; }
 		// Advance frame
-		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+		currentFrame = VulkanRender::advanceFrame(currentFrame);
 	}
 
 	vulkanDevice.device().waitIdle();

@@ -2,6 +2,7 @@
 #define VULKAN_HPP_NO_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include <vector>
+#include "VulkanDevice.hpp"
 
 class VulkanDevice;
 
@@ -20,12 +21,19 @@ public:
 	const vk::raii::Semaphore& getRenderFinishedSemaphore(size_t imageIndex) const { return m_renderFinishedSemaphores[imageIndex]; }
 
 	// Helper to resize if swapchain changes
-	void refresh(size_t swapchainImageCount);
+	inline void refresh(size_t swapchainImageCount)
+	{
+		m_renderFinishedSemaphores.clear();
+		m_renderFinishedSemaphores.reserve(swapchainImageCount);
+		constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
+
+		for (size_t i = 0; i < swapchainImageCount; ++i)
+			{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
+	}
 
 private:
 	const VulkanDevice& m_device;
 	std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores; // [MAX_FRAMES]
 	std::vector<vk::raii::Fence> m_inFlightFences;             // [MAX_FRAMES]
-
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores; // [IMAGE_COUNT]
 };

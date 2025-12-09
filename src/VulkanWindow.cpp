@@ -1,8 +1,9 @@
 // src/VulkanWindow.cpp
+#include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
 
-VulkanWindow::VulkanWindow(const vk::raii::Instance& instance, uint32_t width, uint32_t height, const std::string& name) :
+VulkanWindow::VulkanWindow(const VulkanInstance& instance, uint32_t width, uint32_t height, const std::string& name) :
 	window(nullptr), surface(nullptr)
 {
 	window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
@@ -10,10 +11,10 @@ VulkanWindow::VulkanWindow(const vk::raii::Instance& instance, uint32_t width, u
 		throw std::runtime_error("Failed to create GLFW window");
 
 	VkSurfaceKHR _surface;
-	if (glfwCreateWindowSurface(*instance, window, nullptr, &_surface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(*instance.getInstance(), window, nullptr, &_surface) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create window surface");
         
-	surface = vk::raii::SurfaceKHR(instance, _surface);
+	surface = vk::raii::SurfaceKHR(instance.getInstance(), _surface);
 	LOG_DEBUG("Window and Surface created");
 }
 

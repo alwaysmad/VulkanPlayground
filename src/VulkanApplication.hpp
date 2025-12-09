@@ -11,7 +11,7 @@
 #include "VulkanSync.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
-#include "VulkanCommand.hpp"
+#include "VulkanRender.hpp"
 
 class VulkanApplication
 {
@@ -24,7 +24,15 @@ private:
 	VulkanSwapchain vulkanSwapchain;
 	VulkanPipeline vulkanPipeline;
 	VulkanSync vulkanSync;
-	VulkanCommand vulkanCommand;
+	VulkanRender vulkanRender;
+	/*
+	 * Helper to refresh swapchain
+	 */
+	inline void refreshSwapchain()
+	{
+		vulkanSwapchain.recreate();
+		vulkanSync.refresh(vulkanSwapchain.getImages().size());
+	}
 public:
 	/*
 	 * Constructor

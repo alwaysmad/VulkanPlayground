@@ -5,10 +5,12 @@
 #include <GLFW/glfw3.h>
 #include <string>
 
+class VulkanInstance;
+
 class VulkanWindow
 {
 public:
-	VulkanWindow(const vk::raii::Instance& instance, uint32_t width, uint32_t height, const std::string& name);
+	VulkanWindow(const VulkanInstance& instance, uint32_t width, uint32_t height, const std::string& name);
 	~VulkanWindow();
 
 	inline const vk::raii::SurfaceKHR& getSurface() const { return surface; }
