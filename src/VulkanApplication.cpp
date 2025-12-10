@@ -27,11 +27,28 @@ int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication instance started run()");
 
-	// Frame counter
+	// Frame undexer
 	uint32_t currentFrame = 0;
-	
+	// --- FPS Counter Variables ---
+	double lastTime = vulkanWindow.getTime();
+	uint32_t nbFrames = 0;
+	// -----------------------------
 	while (!vulkanWindow.shouldClose())
 	{
+		// --- FPS Logic ---
+		double currentTime = vulkanWindow.getTime();
+		nbFrames++;
+		if (currentTime - lastTime >= 1.0)
+		{
+			// If 1 second has passed
+			// Create title string
+			std::string title = appName + " - " + std::to_string(nbFrames) + " FPS";
+			vulkanWindow.setWindowTitle(title);
+			// Reset
+			nbFrames = 0;
+			lastTime = currentTime;
+		}
+		// -----------------
 		vulkanWindow.pollEvents();
 
 		// 1. Wait for the previous frame to finish

@@ -17,9 +17,9 @@ public:
 	void recreate();
 
 	inline const vk::raii::SwapchainKHR& getSwapchain() const { return m_swapchain; }
-	inline const vk::Format& getImageFormat() const { return m_imageFormat; }
-	inline const vk::Extent2D& getExtent() const { return m_extent; }
-	inline const std::array<float, 2>& getScale() const { return m_scale; }
+	inline vk::Format getImageFormat() const { return m_imageFormat; }
+	inline vk::Extent2D getExtent() const { return m_extent; }
+	inline std::array<float, 2> getScale() const { return m_scale; }
 	inline const std::vector<vk::raii::ImageView>& getImageViews() const { return m_imageViews; }
 	inline const std::vector<vk::Image>& getImages() const { return m_images; }
 private:

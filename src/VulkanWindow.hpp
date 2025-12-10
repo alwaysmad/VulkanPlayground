@@ -17,6 +17,8 @@ public:
 	inline void waitEvents() const { glfwWaitEvents(); }
 	inline void pollEvents() const { glfwPollEvents(); }
 	vk::Extent2D getExtent() const; 
+	inline void setWindowTitle(const std::string& title) { glfwSetWindowTitle(window, title.c_str()); }
+	inline double getTime() const { return glfwGetTime(); }
 private:
 	GLFWwindow* window;
 	vk::raii::SurfaceKHR surface;

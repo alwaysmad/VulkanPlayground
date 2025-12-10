@@ -40,8 +40,8 @@ void VulkanRender::recordDraw (uint32_t bufferIndex, uint32_t imageIndex, const 
 	const auto& cmd = m_commandBuffers[bufferIndex];
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
-	const auto& extent = m_swapchain.getExtent();
-	const auto& scale = m_swapchain.getScale();
+	const auto extent = m_swapchain.getExtent();
+	const auto scale = m_swapchain.getScale();
 	// 1. Begin
 	cmd.reset();
 	cmd.begin({ .flags = {} });
