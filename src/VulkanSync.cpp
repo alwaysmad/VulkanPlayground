@@ -1,7 +1,7 @@
 #include "VulkanSync.hpp"
 #include "DebugOutput.hpp"
 
-VulkanSync::VulkanSync(const VulkanDevice& device, size_t maxFramesInFlight, size_t swapchainImageCount) 
+VulkanSync::VulkanSync(const VulkanDevice& device, uint32_t maxFramesInFlight, uint32_t swapchainImageCount) 
 	: m_device(device)
 {
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -10,7 +10,7 @@ VulkanSync::VulkanSync(const VulkanDevice& device, size_t maxFramesInFlight, siz
 	// Per-Frame Objects
 	m_imageAvailableSemaphores.reserve(maxFramesInFlight);
 	m_inFlightFences.reserve(maxFramesInFlight);
-	for (size_t i = 0; i < maxFramesInFlight; ++i)
+	for (uint32_t i = 0; i < maxFramesInFlight; ++i)
 	{
 		m_imageAvailableSemaphores.emplace_back(m_device.device(), semaphoreInfo);
 		m_inFlightFences.emplace_back(m_device.device(), fenceInfo);
