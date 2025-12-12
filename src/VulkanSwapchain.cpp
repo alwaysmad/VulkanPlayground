@@ -118,14 +118,14 @@ void VulkanSwapchain::createSwapchain()
 		LOG_DEBUG("\tSupported Usage Flags: " << to_string(caps.supportedUsageFlags));
 
 		LOG_DEBUG("Available Surface Formats (" << formats.size() << "):");
-		for (const auto& fmt : formats)
+		for ([[maybe_unused]] const auto& fmt : formats)
 		{
 			LOG_DEBUG("\tFormat: " << to_string(fmt.format) 
 				<< " | ColorSpace: " << to_string(fmt.colorSpace));
 		}
 
 		LOG_DEBUG("Available Present Modes (" << presentModes.size() << "):");
-		for (const auto& mode : presentModes)
+		for ([[maybe_unused]] const auto& mode : presentModes)
 		{
 			LOG_DEBUG("\t" << to_string(mode));
 		}

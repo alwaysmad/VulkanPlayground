@@ -35,7 +35,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	if constexpr (enableValidationLayers)
 	{
 		LOG_DEBUG("Available Physical Devices (" << devices.size() << ") :");
-		for (const auto& device : devices) { LOG_DEBUG("\t" << device.getProperties().deviceName); }
+		for ([[maybe_unused]] const auto& device : devices) { LOG_DEBUG("\t" << device.getProperties().deviceName); }
 	}
 	
 	// Grab device with the provided name	
@@ -105,10 +105,10 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	if constexpr (enableValidationLayers)
 	{
 		LOG_DEBUG("Available device extensions (" << availableExtensions.size() << ") :");
-		for (const auto& i : availableExtensions) { LOG_DEBUG("\t" << i.extensionName); }
+		for ([[maybe_unused]] const auto& i : availableExtensions) { LOG_DEBUG("\t" << i.extensionName); }
 
 		LOG_DEBUG("Required device extensions (" << requiredDeviceExtensions.size() << ") :");
-		for (const auto& i : requiredDeviceExtensions) { LOG_DEBUG("\t" << i); }
+		for ([[maybe_unused]] const auto& i : requiredDeviceExtensions) { LOG_DEBUG("\t" << i); }
 	}
 
 	for (const auto& requiredDeviceExtension : requiredDeviceExtensions)
@@ -130,7 +130,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	{
 		LOG_DEBUG("Found (" << queueFamilies.size() << ") queue families");
 		LOG_DEBUG("G - Graphics, C - Compute, T - Transfer, P - Present");
-		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+		for ([[maybe_unused]] uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{
 			std::string flags;
 			if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) flags += "G";

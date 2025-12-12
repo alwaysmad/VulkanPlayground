@@ -42,10 +42,10 @@ VulkanInstance::VulkanInstance(const std::string& appName, const GlfwContext& gl
 	if constexpr (enableValidationLayers)
 	{
 		LOG_DEBUG("Available Vulkan extensions (" << extensionProperties.size() << ") :");
-		for (const auto& i : extensionProperties) { LOG_DEBUG("\t" << i.extensionName); }
+		for ([[maybe_unused]] const auto& i : extensionProperties) { LOG_DEBUG("\t" << i.extensionName); }
 
 		LOG_DEBUG("Required extensions (" << requiredExtensions.size() << ") :");
-		for (const auto& name : requiredExtensions) { LOG_DEBUG("\t" << name); }
+		for ([[maybe_unused]] const auto& name : requiredExtensions) { LOG_DEBUG("\t" << name); }
 	}
 
 	for (const auto& requiredExtension : requiredExtensions)
@@ -71,10 +71,10 @@ VulkanInstance::VulkanInstance(const std::string& appName, const GlfwContext& gl
 	if constexpr (enableValidationLayers)
 	{
 		LOG_DEBUG("Available layers (" << layerProperties.size() << ") :");
-		for (const auto& i : layerProperties) { LOG_DEBUG("\t" << i.layerName); }
+		for ([[maybe_unused]] const auto& i : layerProperties) { LOG_DEBUG("\t" << i.layerName); }
 
 		LOG_DEBUG("Required layers (" << requiredLayers.size() << ") :");
-		for (const auto& name : requiredLayers) { LOG_DEBUG("\t" << name); }
+		for ([[maybe_unused]] const auto& name : requiredLayers) { LOG_DEBUG("\t" << name); }
 	}
 
 	for (const auto& requiredLayer : requiredLayers)
