@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
-#include <string> // For C++ strings
-#include <stdexcept> // For std::runtime_error
+#include <cstdlib>
+#include <string>
+#include <stdexcept>
 
 #include "GlfwContext.hpp"
 #include "VulkanInstance.hpp"
@@ -11,7 +11,8 @@
 #include "VulkanSync.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
-#include "VulkanRender.hpp"
+#include "VulkanCommand.hpp"
+#include "Renderer.hpp"
 
 class VulkanApplication
 {
@@ -24,27 +25,16 @@ private:
 	VulkanSwapchain vulkanSwapchain;
 	VulkanPipeline vulkanPipeline;
 	VulkanSync vulkanSync;
-	VulkanRender vulkanRender;
-	/*
-	 * Helper to refresh swapchain
-	 */
+	VulkanCommand vulkanCommand;
+	Renderer renderer;
+
 	inline void refreshSwapchain()
 	{
 		vulkanSwapchain.recreate();
 		vulkanSync.refresh(vulkanSwapchain.getImages().size());
 	}
 public:
-	/*
-	 * Constructor
-	 * handles all initializations
-	 */
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);
-	/*
-	 * Destructor
-	 */
 	~VulkanApplication();
-	/*
-	 * Run the actual programm
-	 */
 	int run();
 };

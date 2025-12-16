@@ -11,8 +11,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
 	vulkanSwapchain(vulkanDevice, vulkanWindow),
 	vulkanPipeline(vulkanDevice, vulkanSwapchain),
-	vulkanSync(vulkanDevice, VulkanRender::MAX_FRAMES_IN_FLIGHT, vulkanSwapchain.getImages().size()),
-	vulkanRender(vulkanDevice, vulkanSwapchain)
+	vulkanSync(vulkanDevice, VulkanCommand::MAX_FRAMES_IN_FLIGHT, vulkanSwapchain.getImages().size()),
+	// Initialize Command System (Resource Manager)
+	vulkanCommand(vulkanDevice),
+	// Initialize Renderer (Logic)
+	renderer(vulkanDevice, vulkanSwapchain, vulkanPipeline)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);
@@ -27,12 +30,11 @@ int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication instance started run()");
 
-	// Frame undexer
 	uint32_t currentFrame = 0;
 	// --- FPS Counter Variables ---
 	double lastTime = vulkanWindow.getTime();
 	uint32_t nbFrames = 0;
-	// -----------------------------
+
 	while (!vulkanWindow.shouldClose())
 	{
 		// --- FPS Logic ---
@@ -40,26 +42,18 @@ int VulkanApplication::run()
 		nbFrames++;
 		if (currentTime - lastTime >= 1.0)
 		{
-			// If 1 second has passed
-			// Create title string
 			std::string title = appName + " - " + std::to_string(nbFrames) + " FPS";
 			vulkanWindow.setWindowTitle(title);
-			// Reset
 			nbFrames = 0;
 			lastTime = currentTime;
 		}
-		// -----------------
 		vulkanWindow.pollEvents();
 
-		// 1. Wait for the previous frame to finish
-		// The fence signals when the GPU is done with this frame's command buffer
+		// 1. Wait for Fence
 		auto& fence = vulkanSync.getInFlightFence(currentFrame);
-
-		// Wait returns a result, usually Success. vk::raii throws on error.
 		(void)vulkanDevice.device().waitForFences({*fence}, vk::True, timeout);
 
-		// 2. Acquire image from swapchain
-		// This semaphore signals when the image is actually ready to be drawn to
+		// 2. Acquire Image
 		auto& imageAvailableSem = vulkanSync.getImageAvailableSemaphore(currentFrame);
 
 		const vk::AcquireNextImageInfoKHR acquireInfo {
@@ -78,13 +72,16 @@ int VulkanApplication::run()
 		catch (const vk::OutOfDateKHRError&)
 			{ refreshSwapchain(); continue; }
 
-		// Only reset the fence if we are actually submitting work
 		vulkanDevice.device().resetFences({*fence});
 
-		// 3. Record Commands
-		vulkanRender.recordDraw(currentFrame, imageIndex, vulkanPipeline);
+		// 3. Record Commands (The New Way)
+		// Get the raw buffer from the Command System
+		const auto& cmd = vulkanCommand.getBuffer(currentFrame);
+		
+		// Tell the Renderer to draw into it
+		renderer.drawFrame(cmd, imageIndex);
 
-		// 4. Submit to Graphics Queue
+		// 4. Submit
 		auto& renderFinishedSem = vulkanSync.getRenderFinishedSemaphore(imageIndex);
 		constexpr vk::PipelineStageFlags waitStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
@@ -93,7 +90,7 @@ int VulkanApplication::run()
 			.pWaitSemaphores = &*imageAvailableSem,
 			.pWaitDstStageMask = &waitStages,
 			.commandBufferCount = 1,
-			.pCommandBuffers = &*vulkanRender.getBuffer(currentFrame),
+			.pCommandBuffers = &*cmd, // Use the cmd we just recorded
 			.signalSemaphoreCount = 1,
 			.pSignalSemaphores = &*renderFinishedSem
 		};
@@ -115,8 +112,8 @@ int VulkanApplication::run()
 		}
 		catch (const vk::OutOfDateKHRError&) 
 			{ refreshSwapchain(); continue; }
-		// Advance frame
-		currentFrame = VulkanRender::advanceFrame(currentFrame);
+
+		currentFrame = VulkanCommand::advanceFrame(currentFrame);
 	}
 
 	vulkanDevice.device().waitIdle();
