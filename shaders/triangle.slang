@@ -24,7 +24,7 @@ static float3 colors[3] = float3[]
 
 struct VertexOutput
 {
-	float3 color;
+	float3 color: COLOR;
 	float4 sv_position : SV_Position;
 };
 

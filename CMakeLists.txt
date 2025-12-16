@@ -8,16 +8,16 @@ project(SimpleVulkan LANGUAGES CXX)
 
 # --- Check for GCC 12+ ---
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
-        message(FATAL_ERROR "GCC version must be at least 12.0! Found: ${CMAKE_CXX_COMPILER_VERSION}. Please enable gcc-toolset-12.")
-    endif()
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+		message(FATAL_ERROR "GCC version must be at least 12.0! Found: ${CMAKE_CXX_COMPILER_VERSION}. Please enable gcc-toolset-12.")
+	endif()
 endif()
 # -------------------------
 
 # --- Set Build Type and Flags ---
 # Set a default build type if none is specified (e.g., Debug)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose build type: Debug, Release, RelWithDebInfo, MinSizeRel")
+	set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose build type: Debug, Release, RelWithDebInfo, MinSizeRel")
 endif()
 
 # Set standard compiler flags for Release and Debug builds
@@ -62,53 +62,60 @@ message(STATUS "Setting vulkan.hpp Git tag to: ${VULKAN_HPP_GIT_TAG}")
 include(FetchContent)
 
 FetchContent_Declare(
-    vulkan-hpp
-    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Hpp.git
-    GIT_TAG        ${VULKAN_HPP_GIT_TAG}
+	vulkan-hpp
+	GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Hpp.git
+	GIT_TAG        ${VULKAN_HPP_GIT_TAG}
 )
 FetchContent_MakeAvailable(vulkan-hpp)
+
+# --- Add GLM ---
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY https://github.com/g-truc/glm.git
+	GIT_TAG        1.0.1
+)
+FetchContent_MakeAvailable(glm)
 
 # --- Find Slang Compiler ---
 find_program(SLANGC_EXECUTABLE slangc)
 if(NOT SLANGC_EXECUTABLE)
-    message(FATAL_ERROR "slangc not found! Please install Slang and add it to your PATH.")
+	message(FATAL_ERROR "slangc not found! Please install Slang and add it to your PATH.")
 endif()
 message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
 
-# --- Define Shader Compilation Function (Modern Embed Version) ---
+# --- Define Shader Compilation Function ---
 function(add_slang_shader_target TARGET_NAME)
-    cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
-    
-    # Get the source filename without extension (e.g., "triangle")
-    list(GET ARG_SOURCES 0 MAIN_SOURCE)
-    get_filename_component(SHADER_NAME ${MAIN_SOURCE} NAME_WE)
+	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+	# Get the source filename without extension (e.g., "triangle")
+	list(GET ARG_SOURCES 0 MAIN_SOURCE)
+	get_filename_component(SHADER_NAME ${MAIN_SOURCE} NAME_WE)
+	
+	set(WORK_DIR ${CMAKE_CURRENT_BINARY_DIR})
+	set(OUTPUT_SPV ${WORK_DIR}/${SHADER_NAME}.spv)
+	set(OUTPUT_HEADER ${WORK_DIR}/${SHADER_NAME}.hpp)
+	
+	set(ENTRY_POINTS -entry vertMain -entry fragMain)
 
-    set(WORK_DIR ${CMAKE_CURRENT_BINARY_DIR})
-    set(OUTPUT_SPV ${WORK_DIR}/${SHADER_NAME}.spv)
-    set(OUTPUT_HEADER ${WORK_DIR}/${SHADER_NAME}.hpp)
-
-    set(ENTRY_POINTS -entry vertMain -entry fragMain)
-
-    add_custom_command(
-        OUTPUT ${OUTPUT_HEADER}
-        # 1. Compile Slang -> SPV
-        COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES} 
-                -target spirv -profile spirv_1_4 -emit-spirv-directly 
-                -fvk-use-entrypoint-name ${ENTRY_POINTS} 
-                -o ${OUTPUT_SPV}
-        
-        # 2. Embed SPV -> C++ Header (using our script)
-        COMMAND ${CMAKE_COMMAND} 
-                -DINPUT_FILE=${OUTPUT_SPV} 
-                -DOUTPUT_FILE=${OUTPUT_HEADER} 
-                -DNAMESPACE=${SHADER_NAME}
-                -P ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
-        
-        DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
-        COMMENT "Compiling and Embedding Slang Shader: ${SHADER_NAME}"
-    )
-
-    add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_HEADER})
+	add_custom_command(
+		OUTPUT ${OUTPUT_HEADER}
+		# 1. Compile Slang -> SPV
+		COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES} 
+			-target spirv -profile spirv_1_4 -emit-spirv-directly 
+			-fvk-use-entrypoint-name ${ENTRY_POINTS} 
+			-o ${OUTPUT_SPV}
+			
+		# 2. Embed SPV -> C++ Header (using our script)
+		COMMAND ${CMAKE_COMMAND} 
+			-DINPUT_FILE=${OUTPUT_SPV} 
+			-DOUTPUT_FILE=${OUTPUT_HEADER}
+			-DNAMESPACE=${SHADER_NAME}
+			-P ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
+		
+		DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
+		COMMENT "Compiling and Embedding Slang Shader: ${SHADER_NAME}"
+	)
+	
+	add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_HEADER})
 endfunction()
 
 # Add our "src" directory where the executable lives

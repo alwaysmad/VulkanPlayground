@@ -261,5 +261,49 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	m_computeQueue = m_device.getQueue(computeQueueIndex, 0);
 
 	LOG_DEBUG("Graphics, Present and Compute queues retrieved");
+}
 
+// Helper to find correct memory type (e.g., DeviceLocal vs HostVisible)
+uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const
+{
+	const auto memProperties = m_physicalDevice.getMemoryProperties();
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+	{
+		// 1. Check if the bit is set in the filter
+		// 2. Check if the memory type has ALL the requested properties
+		if ( (typeFilter & (1 << i)) &&
+				(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+			{ return i;}
+	}
+	throw std::runtime_error("failed to find suitable memory type for buffer");
+}
+
+std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> VulkanDevice::createBuffer(
+		vk::DeviceSize size, 
+		vk::BufferUsageFlags usage, 
+		vk::MemoryPropertyFlags properties) const 
+{
+	// 1. Create the Buffer Object (The "Plate")
+	const vk::BufferCreateInfo bufferInfo {
+		.size = size,
+		.usage = usage,
+		.sharingMode = vk::SharingMode::eExclusive };
+	vk::raii::Buffer buffer(m_device, bufferInfo);
+
+	// 2. Ask: "How much memory do you need, and what alignment?"
+	const auto memRequirements = buffer.getMemoryRequirements();
+
+	// 3. Find a suitable memory heap
+	const uint32_t memType = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	// 4. Allocate the Memory (The "Food")
+	const vk::MemoryAllocateInfo allocInfo{
+		.allocationSize = memRequirements.size,
+		.memoryTypeIndex = memType };
+	vk::raii::DeviceMemory memory(m_device, allocInfo);
+
+	// 5. Bind them together ("Put food on the plate")
+	buffer.bindMemory(*memory, 0);
+
+	return { std::move(buffer), std::move(memory) };
 }

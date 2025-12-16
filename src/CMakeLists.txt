@@ -24,6 +24,9 @@ target_compile_definitions(simplevk PRIVATE
 	# These will now apply to PCH and every source file automatically
     	VULKAN_HPP_NO_CONSTRUCTORS
     	GLFW_INCLUDE_VULKAN
+	# for GLM:
+	GLM_FORCE_DEPTH_ZERO_TO_ONE
+	GLM_FORCE_RADIANS
 )
 
 target_include_directories(simplevk PRIVATE
@@ -34,6 +37,7 @@ target_include_directories(simplevk PRIVATE
 target_link_libraries(simplevk PRIVATE 
 	Vulkan::Vulkan
 	glfw
+	glm::glm
 )
 
 target_precompile_headers(simplevk PRIVATE
@@ -59,4 +63,3 @@ add_slang_shader_target(
 
 # Force 'simplevk' to wait for 'CompileShaders' to finish
 add_dependencies(simplevk CompileShaders)
-# ------------------------

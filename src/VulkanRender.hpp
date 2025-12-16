@@ -12,9 +12,7 @@ public:
 	// This size determines the size of all command buffers and sync objects arrays.
 	static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 	static inline uint32_t advanceFrame (uint32_t currentFrame)
-	{
-		return currentFrame ^ 1u;
-	}
+		{ return currentFrame ^ 1u; }
 	
 	VulkanRender(const VulkanDevice& device, const VulkanSwapchain& swapchain);
 	~VulkanRender();

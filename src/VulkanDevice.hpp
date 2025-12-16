@@ -19,6 +19,11 @@ public:
 	inline uint32_t getGraphicsQueueIndex() const { return graphicsQueueIndex; }
 	inline uint32_t getPresentQueueIndex() const { return presentQueueIndex; }
 
+	std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer (
+			vk::DeviceSize size,
+			vk::BufferUsageFlags usage,
+			vk::MemoryPropertyFlags properties ) const;
+
 private:
 	vk::raii::PhysicalDevice m_physicalDevice;
 	vk::raii::Device m_device;
@@ -30,4 +35,6 @@ private:
 	uint32_t graphicsQueueIndex;
 	uint32_t presentQueueIndex;
 	uint32_t computeQueueIndex;
+
+	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 };
