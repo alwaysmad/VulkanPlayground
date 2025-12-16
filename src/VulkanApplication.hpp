@@ -1,16 +1,11 @@
 #pragma once
-
-#include <cstdlib>
 #include <string>
-#include <stdexcept>
+#include <cstdlib>
 
 #include "GlfwContext.hpp"
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
-#include "VulkanSync.hpp"
-#include "VulkanSwapchain.hpp"
-#include "VulkanPipeline.hpp"
 #include "VulkanCommand.hpp"
 #include "Renderer.hpp"
 
@@ -22,17 +17,13 @@ private:
 	VulkanInstance vulkanInstance;
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
-	VulkanSwapchain vulkanSwapchain;
-	VulkanPipeline vulkanPipeline;
-	VulkanSync vulkanSync;
+	
+	// Command Resources (Pools/Buffers)
 	VulkanCommand vulkanCommand;
+	
+	// The Engine Core (Swapchain, Pipeline, Sync, Draw Logic)
 	Renderer renderer;
 
-	inline void refreshSwapchain()
-	{
-		vulkanSwapchain.recreate();
-		vulkanSync.refresh(vulkanSwapchain.getImages().size());
-	}
 public:
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);
 	~VulkanApplication();
