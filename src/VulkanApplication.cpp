@@ -1,4 +1,5 @@
 #include "VulkanApplication.hpp"
+#include "Mesh.hpp"
 #include "DebugOutput.hpp"
 
 static constexpr uint64_t timeout = UINT64_MAX;
@@ -15,7 +16,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	// Initialize Command System (Resource Manager)
 	vulkanCommand(vulkanDevice),
 	// Initialize Renderer (Logic)
-	renderer(vulkanDevice, vulkanSwapchain, vulkanPipeline)
+	renderer(vulkanDevice, vulkanSwapchain, vulkanPipeline, vulkanCommand)
 {
 	LOG_DEBUG("VulkanApplication instance created");
 	LOG_DEBUG("\tApplication name is " << appName);
@@ -29,7 +30,24 @@ VulkanApplication::~VulkanApplication()
 int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication instance started run()");
+	// --------------------------------------------------------
+	// 1. GENERATE
+	// --------------------------------------------------------	
+	Mesh myMesh;
+	myMesh.vertices = {
+		// Syntax: Vertex( std::array<float, 8>{ x, y, z, w,  p1, p2, p3, p4 } )
+		Vertex(std::array<float, 8>{ 0.0f, -0.5f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f, 0.0f }),
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f }),
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f })
+	};
+	// --------------------------------------------------------
+	// 2. UPLOAD
+	// --------------------------------------------------------
+	renderer.uploadMesh(myMesh);
 
+	// --------------------------------------------------------
+	// 3. DRAW LOOP
+	// --------------------------------------------------------
 	uint32_t currentFrame = 0;
 	// --- FPS Counter Variables ---
 	double lastTime = vulkanWindow.getTime();
@@ -79,7 +97,7 @@ int VulkanApplication::run()
 		const auto& cmd = vulkanCommand.getBuffer(currentFrame);
 		
 		// Tell the Renderer to draw into it
-		renderer.drawFrame(cmd, imageIndex);
+		renderer.drawFrame(cmd, imageIndex, myMesh);
 
 		// 4. Submit
 		auto& renderFinishedSem = vulkanSync.getRenderFinishedSemaphore(imageIndex);

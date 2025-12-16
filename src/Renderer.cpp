@@ -1,21 +1,71 @@
 #include "Renderer.hpp"
+#include "VulkanCommand.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "DebugOutput.hpp"
 
-Renderer::Renderer(const VulkanDevice& device, const VulkanSwapchain& swapchain, const VulkanPipeline& pipeline)
-	: m_device(device), m_swapchain(swapchain), m_pipeline(pipeline)
-{
-	LOG_DEBUG("Renderer initialized");
-}
+Renderer::Renderer(const VulkanDevice& device, const VulkanSwapchain& swapchain, 
+                   const VulkanPipeline& pipeline, const VulkanCommand& command)
+	: m_device(device), m_swapchain(swapchain), m_pipeline(pipeline), m_command(command)
+	{ LOG_DEBUG("Renderer initialized"); }
 
 Renderer::~Renderer()
+	{ LOG_DEBUG("Renderer destroyed"); }
+
+void Renderer::uploadMesh(Mesh& mesh)
 {
-	LOG_DEBUG("Renderer destroyed");
+	if (mesh.vertices.empty()) return;
+
+	vk::DeviceSize vSize = sizeof(Vertex) * mesh.vertices.size();
+	vk::DeviceSize iSize = sizeof(uint16_t) * mesh.indices.size();
+
+	// --- 1. Create Staging Buffers (Host Visible) ---
+	auto [sVBuf, sVMem] = m_device.createBuffer ( vSize,
+			vk::BufferUsageFlagBits::eTransferSrc,
+			vk::MemoryPropertyFlagBits::eHostVisible |
+			vk::MemoryPropertyFlagBits::eHostCoherent );
+
+	// Map & Copy Vertices
+	void* vData = sVMem.mapMemory(0, vSize);
+	memcpy(vData, mesh.vertices.data(), vSize);
+	sVMem.unmapMemory();
+
+	// --- 2. Create GPU Buffers (Device Local) ---
+	// Note usage: TransferDst + VertexBuffer
+	auto [dVBuf, dVMem] = m_device.createBuffer ( vSize, 
+			vk::BufferUsageFlagBits::eTransferDst |
+			vk::BufferUsageFlagBits::eVertexBuffer,
+			vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	// --- 3. Execute Copy ---
+	// We reuse the first command buffer since we aren't drawing yet
+	const auto& cmd = m_command.getBuffer(0); 
+
+	cmd.reset();
+	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+	const vk::BufferCopy copyRegion{ .size = vSize };
+	cmd.copyBuffer(*sVBuf, *dVBuf, copyRegion);
+
+	// (Repeat logic for Index Buffer here if needed)
+
+	cmd.end();
+
+	// --- 4. Submit & Wait ---
+	const vk::SubmitInfo submitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*cmd };
+	m_device.graphicsQueue().submit(submitInfo, nullptr);
+	m_device.graphicsQueue().waitIdle(); // Block until upload finishes
+
+	// --- 5. Transfer ownership to Mesh ---
+	mesh.vertexBuffer = std::move(dVBuf);
+	mesh.vertexMemory = std::move(dVMem);
+	// mesh.indexBuffer = ...
+
+	LOG_DEBUG("Mesh uploaded to VRAM (" << mesh.vertices.size() << " vertices)");
 }
 
-void Renderer::drawFrame(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex)
+void Renderer::drawFrame(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)
 {
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
@@ -97,7 +147,17 @@ void Renderer::drawFrame(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex
 			scale
 	);
 
-	cmd.draw(3, 1, 0, 0);
+	if (mesh.isUploaded())
+	{
+		cmd.bindVertexBuffers(0, {*mesh.vertexBuffer}, {0});
+		// cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0); // If you added index buffer
+		cmd.draw(mesh.vertices.size(), 1, 0, 0); // Non-indexed for now
+	}
+	else
+	{
+		// Fallback or skip
+		cmd.draw(3, 1, 0, 0);
+	}
 
 	cmd.endRendering();
 

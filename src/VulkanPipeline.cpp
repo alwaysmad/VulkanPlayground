@@ -2,6 +2,7 @@
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
 #include "DebugOutput.hpp"
+#include "Vertex.hpp"
 
 #include "triangle.hpp" // The generated header
 
@@ -42,7 +43,12 @@ VulkanPipeline::VulkanPipeline(
 		}
 	};
 	// 3. Vertex input
-	constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo { }; // Empty for now (hardcoded in shader)
+	constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo {
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &VertexTraits::bindingDescription,
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(VertexTraits::attributeDescriptions.size()),
+		.pVertexAttributeDescriptions = VertexTraits::attributeDescriptions.data()
+	};
 	// 4. Input assembly
 	constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
 		.topology = vk::PrimitiveTopology::eTriangleList,
