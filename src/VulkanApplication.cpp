@@ -21,7 +21,7 @@ VulkanApplication::~VulkanApplication()
 
 int VulkanApplication::run()
 {
-	LOG_DEBUG("App started");
+	LOG_DEBUG("VulkanApplication started run()");
 
 	// 1. GENERATE
 	Mesh myMesh;
@@ -42,6 +42,10 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		renderer.draw(myMesh);
 	}
+	// FIX: Wait for the GPU to finish executing the last frame
+	// BEFORE 'myMesh' is destroyed at the closing brace.
+	vulkanDevice.device().waitIdle();
 
+	LOG_DEBUG("VulkanApplication ended run()");
 	return EXIT_SUCCESS;
 }
