@@ -1,13 +1,12 @@
 // src/VulkanInstance.hpp
 #pragma once
 #include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-#include "GlfwContext.hpp"
 #include <vector>
 #include <fstream> // for file output
 
 class VulkanInstance {
 public:
-	VulkanInstance(const std::string& appName, const GlfwContext& glfw);
+	VulkanInstance(const std::string& appName, const std::vector<const char*>& requiredExtensions);
 	~VulkanInstance();
 	
 	inline const vk::raii::Instance& getInstance() const { return instance; }

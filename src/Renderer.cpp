@@ -46,63 +46,6 @@ void Renderer::recreateSwapchain()
 	}
 }
 
-std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> 
-Renderer::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage)
-{
-	auto stagingResult = m_device.createBuffer(size, 
-		vk::BufferUsageFlagBits::eTransferSrc,
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-	
-	vk::raii::DeviceMemory sMem = std::move(stagingResult.second);
-	vk::raii::Buffer       sBuf = std::move(stagingResult.first);
-
-	void* mapped = sMem.mapMemory(0, size);
-	memcpy(mapped, data, size);
-	sMem.unmapMemory();
-
-	auto [dBuf, dMem] = m_device.createBuffer(size, 
-		vk::BufferUsageFlagBits::eTransferDst | usage, 
-		vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-	const auto& cmd = m_command.getBuffer(0);
-	
-	cmd.reset();
-	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-	vk::BufferCopy region{ .size = size };
-	cmd.copyBuffer(*sBuf, *dBuf, region);
-	cmd.end();
-
-	const vk::SubmitInfo submitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*cmd };
-	m_device.graphicsQueue().submit(submitInfo, nullptr);
-	m_device.graphicsQueue().waitIdle();
-
-	return { std::move(dBuf), std::move(dMem) };
-}
-
-void Renderer::uploadMesh(Mesh& mesh)
-{
-	if (mesh.vertices.empty()) return;
-
-	auto [vBuf, vMem] = uploadToDevice(
-		mesh.vertices.data(), 
-		sizeof(Vertex) * mesh.vertices.size(), 
-		vk::BufferUsageFlagBits::eVertexBuffer
-	);
-	mesh.vertexBuffer = std::move(vBuf);
-	mesh.vertexMemory = std::move(vMem);
-
-	if (!mesh.indices.empty()) {
-		auto [iBuf, iMem] = uploadToDevice(
-			mesh.indices.data(), 
-			sizeof(uint16_t) * mesh.indices.size(), 
-			vk::BufferUsageFlagBits::eIndexBuffer
-		);
-		mesh.indexBuffer = std::move(iBuf);
-		mesh.indexMemory = std::move(iMem);
-	}
-	LOG_DEBUG("Mesh uploaded");
-}
-
 bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore)
 {
 	// 1. Acquire Image

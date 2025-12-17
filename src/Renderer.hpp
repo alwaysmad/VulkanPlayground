@@ -14,8 +14,6 @@ public:
 	Renderer(const VulkanDevice& device, const VulkanWindow& window);
 	~Renderer();
 
-	void uploadMesh(Mesh& mesh);
-
 	// Returns 'true' if the frame was successfully submitted.
 	// Returns 'false' if swapchain was recreated (and fence was NOT reset).
 	bool draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore = nullptr);
@@ -29,14 +27,11 @@ private:
 	VulkanSwapchain m_swapchain;
 	VulkanPipeline  m_pipeline;
 
+	// Sync
 	// Keep this one fixed size [MAX_FRAMES_IN_FLIGHT]
 	std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores;
-
-	// CHANGE: This one must match Swapchain Image Count!
+	// This one must match Swapchain Image Count!
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
-
-	[[nodiscard]] std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> 
-	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 
 	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh);
 	void recreateSwapchain();

@@ -21,9 +21,11 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	m_graphicsQueue(nullptr),
 	m_presentQueue(nullptr),
 	m_computeQueue(nullptr),
+	m_transferQueue(nullptr),
 	graphicsQueueIndex(UINT32_MAX),
 	presentQueueIndex(UINT32_MAX),
-	computeQueueIndex(UINT32_MAX)
+	computeQueueIndex(UINT32_MAX),
+	transferQueueIndex(UINT32_MAX)
 {
 	////////////////////////////////////////////////////////////////////////////////
 	// Find and pick physical device
@@ -189,18 +191,40 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	if (computeQueueIndex == UINT32_MAX)
 		{ computeQueueIndex = graphicsQueueIndex; }
 
+	// 4. Try to find a dedicated transfer queue (has Transfer bit, but NO Graphics/Compute bits)
+	// This is common on NVIDIA/AMD cards and allows faster DMA copies.
+	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+	{
+		const auto flags = queueFamilies[i].queueFlags;
+		if ((flags & vk::QueueFlagBits::eTransfer) &&
+			!(flags & vk::QueueFlagBits::eGraphics) &&
+			!(flags & vk::QueueFlagBits::eCompute))
+		{
+			transferQueueIndex = i;
+			break;
+		}
+	}
+	// Fallback: Use Compute queue (often supports transfer)
+	if (transferQueueIndex == UINT32_MAX && computeQueueIndex != UINT32_MAX)
+		transferQueueIndex = computeQueueIndex;
+	// Fallback: Use Graphics queue
+	if (transferQueueIndex == UINT32_MAX)
+		transferQueueIndex = graphicsQueueIndex;
+
 	if (graphicsQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find graphics queue family"); }
 	else { LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
 	if (presentQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find queue family that can present to surface"); }
 	else { LOG_DEBUG("Selected " << presentQueueIndex << " as present queue family"); }
 	if (computeQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find compute queue family"); }
 	else { LOG_DEBUG("Selected " << computeQueueIndex << " as compute queue family"); }
+	if (transferQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find transfer queue family"); }
+	else { LOG_DEBUG("Selected " << transferQueueIndex << " as transfer queue family"); }
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Prepare Queue Creation Info
 	////////////////////////////////////////////////////////////////////////////////
 	// We use a set to ensure we only create ONE queue info per unique family.
-	const std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex };
+	const std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex, transferQueueIndex};
 
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
@@ -259,8 +283,9 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	m_graphicsQueue = m_device.getQueue(graphicsQueueIndex, 0);
 	m_presentQueue = m_device.getQueue(presentQueueIndex, 0);
 	m_computeQueue = m_device.getQueue(computeQueueIndex, 0);
+	m_transferQueue = m_device.getQueue(transferQueueIndex, 0);
 
-	LOG_DEBUG("Graphics, Present and Compute queues retrieved");
+	LOG_DEBUG("Queues retrieved");
 }
 
 // Helper to find correct memory type (e.g., DeviceLocal vs HostVisible)

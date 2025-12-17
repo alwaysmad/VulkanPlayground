@@ -10,7 +10,7 @@ static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validati
 
 std::ofstream VulkanInstance::logFile;
 
-VulkanInstance::VulkanInstance(const std::string& appName, const GlfwContext& glfw) 
+VulkanInstance::VulkanInstance(const std::string& appName, const std::vector<const char*>& extensions)
 	: context(), instance(nullptr), debugMessenger(nullptr) 
 {
 	if constexpr (enableValidationLayers)
@@ -32,7 +32,7 @@ VulkanInstance::VulkanInstance(const std::string& appName, const GlfwContext& gl
 	// Extensions
 	////////////////////////////////////////////////////////////////////////////////
 	// Get the required extensions.
-	auto requiredExtensions = glfw.getRequiredInstanceExtensions();
+	auto requiredExtensions = extensions;
 	if constexpr (enableValidationLayers)
 		requiredExtensions.push_back(vk::EXTDebugUtilsExtensionName);
 
