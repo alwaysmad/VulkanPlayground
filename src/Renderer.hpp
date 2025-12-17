@@ -12,7 +12,13 @@ class VulkanCommand;
 class Renderer
 {
 public:
-	// Renderer now needs Window to create the Swapchain internally
+	// Double buffering
+	static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
+	// Helper to flip between 0 and 1
+	static inline uint32_t advanceFrame(uint32_t currentFrame)
+		{ return currentFrame ^ 1u; }
+
 	Renderer(	const VulkanDevice& device,
 			const VulkanWindow& window,
 			const VulkanCommand& command );

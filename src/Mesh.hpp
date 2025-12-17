@@ -11,15 +11,13 @@ public:
 	std::vector<uint16_t> indices;
 
 	// 2. GPU Data
-	// FIX: Declare Memory BEFORE Buffer.
+	// Declare Memory BEFORE Buffer.
 	// Destruction happens in reverse order:
-	// 1. Buffer destroys (Good)
-	// 2. Memory frees (Good)
 	vk::raii::DeviceMemory vertexMemory = nullptr;
 	vk::raii::Buffer vertexBuffer = nullptr;
 
 	vk::raii::DeviceMemory indexMemory = nullptr;
 	vk::raii::Buffer indexBuffer = nullptr;
 
-	[[nodiscard]] bool isUploaded() const { return vertexBuffer != nullptr; }
+	[[nodiscard]] inline bool isUploaded() const { return vertexBuffer != nullptr; }
 };

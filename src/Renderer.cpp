@@ -10,7 +10,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	  m_window(window),
 	  m_swapchain(device, window),
 	  m_pipeline(device, m_swapchain),
-	  m_sync(device, VulkanCommand::MAX_FRAMES_IN_FLIGHT, m_swapchain.getImages().size())
+	  m_sync(device, MAX_FRAMES_IN_FLIGHT, m_swapchain.getImages().size())
 {
 	LOG_DEBUG("Renderer initialized");
 }
@@ -145,7 +145,7 @@ void Renderer::draw(const Mesh& mesh)
 		recreateSwapchain();
 	}
 
-	m_currentFrame = VulkanCommand::advanceFrame(m_currentFrame);
+	m_currentFrame = advanceFrame(m_currentFrame);
 }
 
 void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)

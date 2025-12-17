@@ -33,7 +33,7 @@ int main(/* int argc, char** argv*/ )
 	{
 		// Create an VulkanApplication instance 
 		// execute run() method 
-		// then destroy instance as it's an anonymous object
+		// then destroy the instance as it's an anonymous object
 		return VulkanApplication(AppName, DeviceName, WIDTH, HEIGHT).run();
 	}
 	// The exception type for vulkan_raii.hpp is vk::SystemError

@@ -8,7 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanInstance(appName, glfwContext),
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
-	vulkanCommand(vulkanDevice),
+	vulkanCommand(vulkanDevice, Renderer::MAX_FRAMES_IN_FLIGHT),
 	renderer(vulkanDevice, vulkanWindow, vulkanCommand)
 {
 	LOG_DEBUG("VulkanApplication instance created");
@@ -26,10 +26,10 @@ int VulkanApplication::run()
 	// 1. GENERATE
 	Mesh myMesh;
 	myMesh.vertices = {
-		Vertex(std::array<float, 8>{-0.5f, -0.5f, 0.0f, 0,  1,0,0,0}), // 0
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, 0.0f, 0,  0,1,0,0}), // 1
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0,  0,0,1,0}), // 2
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0,  1,1,1,0})  // 3
+		Vertex(std::array<float, 8>{-0.5f, -0.5f, 0.0f, 0,  1, 0, 0, 0}), // 0
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, 0.0f, 0,  0, 1, 0, 0}), // 1
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0,  0, 0, 1, 0}), // 2
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0,  1, 1, 1, 0})  // 3
 	};
 	myMesh.indices = { 0, 1, 2, 2, 3, 0 }; 
 
@@ -40,9 +40,10 @@ int VulkanApplication::run()
 	while (!vulkanWindow.shouldClose())
 	{
 		vulkanWindow.pollEvents();
+		vulkanWindow.updateFPS(appName);
 		renderer.draw(myMesh);
 	}
-	// FIX: Wait for the GPU to finish executing the last frame
+	// Wait for the GPU to finish executing the last frame
 	// BEFORE 'myMesh' is destroyed at the closing brace.
 	vulkanDevice.device().waitIdle();
 
