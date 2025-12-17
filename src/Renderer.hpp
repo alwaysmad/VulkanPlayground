@@ -3,45 +3,36 @@
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "VulkanSync.hpp"
+#include "VulkanCommand.hpp" // Now fully included because we store it by value
 #include "Mesh.hpp"
 
 class VulkanDevice;
 class VulkanWindow;
-class VulkanCommand;
 
 class Renderer
 {
 public:
-	Renderer(	const VulkanDevice& device,
-			const VulkanWindow& window,
-			const VulkanCommand& command );
+	Renderer(const VulkanDevice& device, const VulkanWindow& window);
 	~Renderer();
 
-	// 1. Resource Management
 	void uploadMesh(Mesh& mesh);
-
-	// 2. Main Loop: Handles Acquire -> Record -> Submit -> Present
 	void draw(const Mesh& mesh);
 
 private:
 	const VulkanDevice& m_device;
-	const VulkanCommand& m_command;
-	const VulkanWindow& m_window; // Stored for recreation events
+	const VulkanWindow& m_window;
 
 	// Owned Resources
+	VulkanCommand   m_command;   // <--- Renderer owns this now
 	VulkanSwapchain m_swapchain;
 	VulkanPipeline  m_pipeline;
 	VulkanSync      m_sync;
 
 	uint32_t m_currentFrame = 0;
 
-	// Helper to deduplicate Staging -> Device copy logic
 	[[nodiscard]] std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> 
 	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 
-	// Internal record function
 	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh);
-	
-	// Helper to handle window resize/minimization
 	void recreateSwapchain();
 };

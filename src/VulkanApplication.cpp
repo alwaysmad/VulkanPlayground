@@ -8,16 +8,11 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanInstance(appName, glfwContext),
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
-	vulkanCommand(vulkanDevice, VulkanCommand::MAX_FRAMES_IN_FLIGHT),
-	renderer(vulkanDevice, vulkanWindow, vulkanCommand)
-{
-	LOG_DEBUG("VulkanApplication instance created");
-}
+	renderer(vulkanDevice, vulkanWindow)
+	{ LOG_DEBUG("VulkanApplication instance created"); }
 
 VulkanApplication::~VulkanApplication()
-{
-	LOG_DEBUG("VulkanApplication instance destroyed");
-}
+	{ LOG_DEBUG("VulkanApplication instance destroyed"); }
 
 int VulkanApplication::run()
 {

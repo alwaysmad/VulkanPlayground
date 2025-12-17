@@ -6,7 +6,6 @@
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
-#include "VulkanCommand.hpp"
 #include "Renderer.hpp"
 
 class VulkanApplication
@@ -17,9 +16,6 @@ private:
 	VulkanInstance vulkanInstance;
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
-	
-	// Command Resources (Pools/Buffers)
-	VulkanCommand vulkanCommand;
 	
 	// The Engine Core (Swapchain, Pipeline, Sync, Draw Logic)
 	Renderer renderer;

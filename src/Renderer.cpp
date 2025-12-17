@@ -4,22 +4,18 @@
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
 
-Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const VulkanCommand& command)
+Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window)
 	: m_device(device), 
-	  m_command(command),
 	  m_window(window),
+	  // 1. Create Command System (GRAPHICS Queue)
+	  m_command(device, device.getGraphicsQueueIndex()),
+	  // 2. Other resources
 	  m_swapchain(device, window),
 	  m_pipeline(device, m_swapchain),
 	  m_sync(device, VulkanCommand::MAX_FRAMES_IN_FLIGHT, m_swapchain.getImages().size())
-{
-	LOG_DEBUG("Renderer initialized");
-}
+	{ LOG_DEBUG("Renderer initialized"); }
 
-Renderer::~Renderer()
-{
-	m_device.device().waitIdle();
-	LOG_DEBUG("Renderer destroyed");
-}
+Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
 
 void Renderer::recreateSwapchain()
 {
