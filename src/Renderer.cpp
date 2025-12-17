@@ -19,24 +19,14 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window)
 	// 2. Create Per-Image Sync Objects (Render Finished)
 	// We need one per swapchain image to satisfy validation layers
 	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
-	for (size_t i = 0; i < m_swapchain.getImages().size(); ++i)
-		{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
-
+	remakeRenderFinishedSemaphores();
 	LOG_DEBUG("Renderer initialized");
 }
 
-Renderer::~Renderer()
+void Renderer::remakeRenderFinishedSemaphores()
 {
-	m_device.device().waitIdle();
-	LOG_DEBUG("Renderer destroyed");
-}
-
-void Renderer::recreateSwapchain()
-{
-	m_swapchain.recreate();
-
-	// Re-create semaphores if image count changed
 	size_t imageCount = m_swapchain.getImages().size();
+	// Re-create semaphores if image count changed
 	if (m_renderFinishedSemaphores.size() != imageCount)
 	{
 		m_renderFinishedSemaphores.clear();
@@ -44,6 +34,14 @@ void Renderer::recreateSwapchain()
 		for (size_t i = 0; i < imageCount; ++i)
 			{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
 	}
+}
+
+Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
+
+void Renderer::recreateSwapchain()
+{
+	m_swapchain.recreate();
+	remakeRenderFinishedSemaphores();
 }
 
 bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore)

@@ -19,9 +19,9 @@ struct Vertex
 	// --- Constructors ---
 	Vertex() = default;
 
-	explicit Vertex(const std::array<float, 8>& data) 
-		: posVar1{ packSnorm(data[0]), packSnorm(data[1]), packSnorm(data[2]), packSnorm(data[3]) },
-		  paramsVar2{ glm::packHalf1x16(data[4]), glm::packHalf1x16(data[5]), glm::packHalf1x16(data[6]), glm::packHalf1x16(data[7]) }
+	explicit Vertex(const std::array<float, 8>& data) : 
+		posVar1{ packSnorm(data[0]), packSnorm(data[1]), packSnorm(data[2]), packSnorm(data[3]) },
+		paramsVar2{ glm::packHalf1x16(data[4]), glm::packHalf1x16(data[5]), glm::packHalf1x16(data[6]), glm::packHalf1x16(data[7]) }
 	{}
 
 private:

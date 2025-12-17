@@ -30,9 +30,9 @@ private:
 	// Sync
 	// Keep this one fixed size [MAX_FRAMES_IN_FLIGHT]
 	std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores;
-	// This one must match Swapchain Image Count!
+	// This one must match Swapchain Image Count
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
-
+	void remakeRenderFinishedSemaphores();
 	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh);
 	void recreateSwapchain();
 };
