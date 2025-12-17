@@ -35,4 +35,6 @@ private:
 	void remakeRenderFinishedSemaphores();
 	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh);
 	void recreateSwapchain();
+
+	static constexpr std::array<float, 4> backgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
 };

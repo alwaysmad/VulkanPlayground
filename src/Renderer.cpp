@@ -70,28 +70,30 @@ bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fe
 	recordCommands(cmd, imageIndex, mesh);
 
 	// 4. Submit
-	// CHANGE: Use imageIndex instead of currentFrame for the signal semaphore
 	auto& renderSem = m_renderFinishedSemaphores[imageIndex];
+	// Max wait semaphores = 2 (1 for Swapchain, 1 optional for Compute/External)
+	std::array<vk::Semaphore, 2> waitSems;
+	std::array<vk::PipelineStageFlags, 2> waitStages;
+	uint32_t waitCount = 0;
 
-	std::vector<vk::Semaphore> waitSems;
-	std::vector<vk::PipelineStageFlags> waitStages;
+	// Internal Wait (Always present)
+	waitSems[waitCount] = *imgSem;
+	waitStages[waitCount] = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+	waitCount++;
 
-	// Internal Wait
-	waitSems.push_back(*imgSem);
-	waitStages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-
-	// External Wait
+	// External Wait (Optional)
 	if (waitSemaphore) {
-		waitSems.push_back(*waitSemaphore);
-		waitStages.push_back(vk::PipelineStageFlagBits::eVertexInput); 
+		waitSems[waitCount] = *waitSemaphore;
+		waitStages[waitCount] = vk::PipelineStageFlagBits::eVertexInput; 
+		waitCount++;
 	}
 
 	const vk::SubmitInfo submitInfo {
-		.waitSemaphoreCount = static_cast<uint32_t>(waitSems.size()),
+		.waitSemaphoreCount = waitCount,
 		.pWaitSemaphores = waitSems.data(),
 		.pWaitDstStageMask = waitStages.data(),
 		.commandBufferCount = 1, .pCommandBuffers = &*cmd,
-		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem // Using imageIndex
+		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem
 	};
 
 	m_device.graphicsQueue().submit(submitInfo, fence);
@@ -104,9 +106,7 @@ bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fe
 			.pImageIndices = &imageIndex
 		});
 		if (result == vk::Result::eSuboptimalKHR) { recreateSwapchain(); }
-	} catch (const vk::OutOfDateKHRError&) {
-		recreateSwapchain();
-	}
+	} catch (const vk::OutOfDateKHRError&) { recreateSwapchain(); }
 	
 	return true;
 }
@@ -131,12 +131,14 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1 }
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &preRenderBarrier });
 
 	// Rendering
-	constexpr vk::ClearValue clearColor { .color = { std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f} } };
+	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
 	const vk::RenderingAttachmentInfo attachment {
 		.imageView = swapchainImageView,
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -149,26 +151,18 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline.getPipeline());
 	
-	vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
+	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
 	cmd.setViewport(0, vp);
-	vk::Rect2D scissor { .extent = extent };
+	const vk::Rect2D scissor { .extent = extent };
 	cmd.setScissor(0, scissor);
-	
+
+	// upload screen axes scaling as push constants	
 	cmd.pushConstants<std::array<float, 2>>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_swapchain.getScale());
 
-	if (mesh.isUploaded())
-	{
-		cmd.bindVertexBuffers(0, {*mesh.vertexBuffer}, {0});
-		if (mesh.indexBuffer != nullptr)
-		{
-			cmd.bindIndexBuffer(*mesh.indexBuffer, 0, vk::IndexType::eUint16);
-			cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0);
-		}
-		else
-		{
-			cmd.draw(mesh.vertices.size(), 1, 0, 0);
-		}
-	}
+	// bind mesh to command and order to draw it	
+	cmd.bindVertexBuffers(0, {*mesh.vertexBuffer}, {0});
+	cmd.bindIndexBuffer(*mesh.indexBuffer, 0, vk::IndexType::eUint32);
+	cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0);
 
 	cmd.endRendering();
 

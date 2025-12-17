@@ -14,6 +14,7 @@ static constexpr std::array requiredDeviceExtensions = {
 };
 
 static constexpr float queuePriority = 1.0f;
+static constexpr uint32_t ALLOCATION_WARNING_THRESHOLD = 4000;
 
 VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& window, const std::string& deviceName) :
 	m_physicalDevice(nullptr),
@@ -303,32 +304,43 @@ uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFla
 	throw std::runtime_error("failed to find suitable memory type for buffer");
 }
 
-std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> VulkanDevice::createBuffer(
+std::pair<vk::raii::Buffer, TrackedDeviceMemory> VulkanDevice::createBuffer(
 		vk::DeviceSize size, 
 		vk::BufferUsageFlags usage, 
 		vk::MemoryPropertyFlags properties) const 
 {
-	// 1. Create the Buffer Object (The "Plate")
+	// 1. Create Buffer
 	const vk::BufferCreateInfo bufferInfo {
 		.size = size,
 		.usage = usage,
-		.sharingMode = vk::SharingMode::eExclusive };
+		.sharingMode = vk::SharingMode::eExclusive 
+	};
 	vk::raii::Buffer buffer(m_device, bufferInfo);
 
-	// 2. Ask: "How much memory do you need, and what alignment?"
+	// 2. Find Memory
 	const auto memRequirements = buffer.getMemoryRequirements();
-
-	// 3. Find a suitable memory heap
 	const uint32_t memType = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-	// 4. Allocate the Memory (The "Food")
+	// 3. Check Limits (Querying the Static Member)
+	// We check BEFORE allocation to warn about what is about to happen
+	if (TrackedDeviceMemory::allocationCount >= ALLOCATION_WARNING_THRESHOLD)
+	{
+		std::cerr << DBG_COLOR_YELLOW 
+			<< "[WARNING] High memory allocation count: " 
+			<< TrackedDeviceMemory::allocationCount
+			<< " (Limit ~4096)" << DBG_COLOR_RESET << std::endl;
+	}
+
+	// 4. Allocate
 	const vk::MemoryAllocateInfo allocInfo{
 		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = memType };
+		.memoryTypeIndex = memType 
+	};
 	vk::raii::DeviceMemory memory(m_device, allocInfo);
 
-	// 5. Bind them together ("Put food on the plate")
+	// 5. Bind
 	buffer.bindMemory(*memory, 0);
 
-	return { std::move(buffer), std::move(memory) };
+	// 6. Return Wrapped
+	return { std::move(buffer), TrackedDeviceMemory(std::move(memory)) };
 }

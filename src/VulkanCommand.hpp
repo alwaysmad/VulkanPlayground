@@ -28,13 +28,9 @@ public:
 				  .commandBufferCount = MAX_FRAMES_IN_FLIGHT
 			  }
 		  )
-	{
-		LOG_DEBUG("VulkanCommand resources created for Queue Family " << queueFamilyIndex);
-	}
+		{ LOG_DEBUG("VulkanCommand created for Queue Family " << queueFamilyIndex); }
 
-	~VulkanCommand() {
-		LOG_DEBUG("VulkanCommand resources destroyed");
-	}
+	~VulkanCommand() { LOG_DEBUG("VulkanCommand resources destroyed"); }
 
 	const vk::raii::CommandBuffer& getBuffer(uint32_t index) const { return m_commandBuffers[index]; }
 	const vk::raii::CommandPool& getPool() const { return m_commandPool; }

@@ -1,7 +1,62 @@
 // src/VulkanDevice.hpp
 #pragma once
 #include <vulkan/vulkan_raii.hpp>
+#include <atomic>
+#include <iostream>
+#include "DebugOutput.hpp"
 
+// Forward declaration
+class VulkanDevice;
+
+// --- The Proxy Class ---
+class TrackedDeviceMemory
+{
+public:
+	// 1. Exemplary Usage: Public Static Atomic Counter
+	inline static std::atomic<uint32_t> allocationCount { 0 };
+
+	// Constructors
+	TrackedDeviceMemory() = default; 
+	
+	explicit TrackedDeviceMemory(vk::raii::DeviceMemory&& mem) 
+		: m_memory(std::move(mem)) 
+	{ if (*m_memory) allocationCount++; }
+
+	~TrackedDeviceMemory() { if (*m_memory) allocationCount--; }
+
+	TrackedDeviceMemory(TrackedDeviceMemory&& other) noexcept 
+		: m_memory(std::move(other.m_memory)) {}
+
+	TrackedDeviceMemory& operator=(TrackedDeviceMemory&& other) noexcept {
+		if (this != &other) {
+			if (*m_memory) { allocationCount--; }
+			m_memory = std::move(other.m_memory);
+		}
+		return *this;
+	}
+
+	TrackedDeviceMemory(const TrackedDeviceMemory&) = delete;
+	TrackedDeviceMemory& operator=(const TrackedDeviceMemory&) = delete;
+
+	// --- Transparency Operators  ---
+
+	// 1. Dereference (*mem) returns the Underlying Handle (vk::DeviceMemory)
+	// This allows usage in Vulkan API calls: buffer.bindMemory(*mem, 0);
+	const vk::DeviceMemory& operator*() const { return *m_memory; }
+
+	// 2. Arrow (mem->) returns the RAII Wrapper (vk::raii::DeviceMemory)
+	// This allows usage of RAII methods: mem->mapMemory(...);
+	vk::raii::DeviceMemory* operator->() { return &m_memory; }
+	const vk::raii::DeviceMemory* operator->() const { return &m_memory; }
+
+	// Accessor
+	const vk::raii::DeviceMemory& get() const { return m_memory; }
+
+private:
+	vk::raii::DeviceMemory m_memory = nullptr;
+};
+
+// --- VulkanDevice ---
 class VulkanInstance;
 class VulkanWindow;
 
@@ -25,7 +80,8 @@ public:
 	inline uint32_t getComputeQueueIndex() const { return computeQueueIndex; }
 	inline uint32_t getTransferQueueIndex() const { return transferQueueIndex; }
 
-	std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer (
+	// CHANGE: Return type is now the Tracked Memory
+	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> createBuffer (
 			vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
 			vk::MemoryPropertyFlags properties ) const;
