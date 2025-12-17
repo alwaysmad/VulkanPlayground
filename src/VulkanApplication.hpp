@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include <cstdlib>
 
 #include "GlfwContext.hpp"
@@ -17,8 +18,11 @@ private:
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
 	
-	// The Engine Core (Swapchain, Pipeline, Sync, Draw Logic)
 	Renderer renderer;
+
+	// Orchestration Sync (Owned by App)
+	std::vector<vk::raii::Fence> m_inFlightFences; 
+	// Future: m_computeFinishedSemaphores
 
 public:
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);

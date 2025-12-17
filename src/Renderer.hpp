@@ -2,8 +2,7 @@
 #include <vulkan/vulkan_raii.hpp>
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
-#include "VulkanSync.hpp"
-#include "VulkanCommand.hpp" // Now fully included because we store it by value
+#include "VulkanCommand.hpp" 
 #include "Mesh.hpp"
 
 class VulkanDevice;
@@ -16,19 +15,25 @@ public:
 	~Renderer();
 
 	void uploadMesh(Mesh& mesh);
-	void draw(const Mesh& mesh);
+
+	// Returns 'true' if the frame was successfully submitted.
+	// Returns 'false' if swapchain was recreated (and fence was NOT reset).
+	bool draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore = nullptr);
 
 private:
 	const VulkanDevice& m_device;
 	const VulkanWindow& m_window;
 
 	// Owned Resources
-	VulkanCommand   m_command;   // <--- Renderer owns this now
+	VulkanCommand   m_command;
 	VulkanSwapchain m_swapchain;
 	VulkanPipeline  m_pipeline;
-	VulkanSync      m_sync;
 
-	uint32_t m_currentFrame = 0;
+	// Keep this one fixed size [MAX_FRAMES_IN_FLIGHT]
+	std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores;
+
+	// CHANGE: This one must match Swapchain Image Count!
+	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
 	[[nodiscard]] std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> 
 	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);

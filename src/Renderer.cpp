@@ -1,51 +1,69 @@
 #include "Renderer.hpp"
-#include "VulkanCommand.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
 
 Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window)
 	: m_device(device), 
-	  m_window(window),
-	  // 1. Create Command System (GRAPHICS Queue)
-	  m_command(device, device.getGraphicsQueueIndex()),
-	  // 2. Other resources
-	  m_swapchain(device, window),
-	  m_pipeline(device, m_swapchain),
-	  m_sync(device, VulkanCommand::MAX_FRAMES_IN_FLIGHT, m_swapchain.getImages().size())
-	{ LOG_DEBUG("Renderer initialized"); }
+	m_window(window),
+	m_command(device, device.getGraphicsQueueIndex()),
+	m_swapchain(device, window),
+	m_pipeline(device, m_swapchain)
+{
+	// 1. Create Per-Frame Sync Objects (Image Available)
+	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
 
-Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
+	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
+		{ m_imageAvailableSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
+
+	// 2. Create Per-Image Sync Objects (Render Finished)
+	// We need one per swapchain image to satisfy validation layers
+	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
+	for (size_t i = 0; i < m_swapchain.getImages().size(); ++i)
+		{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
+
+	LOG_DEBUG("Renderer initialized");
+}
+
+Renderer::~Renderer()
+{
+	m_device.device().waitIdle();
+	LOG_DEBUG("Renderer destroyed");
+}
 
 void Renderer::recreateSwapchain()
 {
 	m_swapchain.recreate();
-	m_sync.refresh(m_swapchain.getImages().size());
+
+	// Re-create semaphores if image count changed
+	size_t imageCount = m_swapchain.getImages().size();
+	if (m_renderFinishedSemaphores.size() != imageCount)
+	{
+		m_renderFinishedSemaphores.clear();
+		constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
+		for (size_t i = 0; i < imageCount; ++i)
+			{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
+	}
 }
 
 std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> 
 Renderer::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage)
 {
-	// --- 1. Staging (CPU) ---
-	// FIX: Explicitly declare variables to ensure 'sBuf' (Buffer) is destroyed BEFORE 'sMem' (Memory)
 	auto stagingResult = m_device.createBuffer(size, 
 		vk::BufferUsageFlagBits::eTransferSrc,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 	
-	vk::raii::DeviceMemory sMem = std::move(stagingResult.second); // Memory declared 1st (dies 2nd)
-	vk::raii::Buffer       sBuf = std::move(stagingResult.first);  // Buffer declared 2nd (dies 1st)
+	vk::raii::DeviceMemory sMem = std::move(stagingResult.second);
+	vk::raii::Buffer       sBuf = std::move(stagingResult.first);
 
-	// 2. Copy to Staging
 	void* mapped = sMem.mapMemory(0, size);
 	memcpy(mapped, data, size);
 	sMem.unmapMemory();
 
-	// --- 3. Device (GPU) ---
 	auto [dBuf, dMem] = m_device.createBuffer(size, 
 		vk::BufferUsageFlagBits::eTransferDst | usage, 
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	// 4. Copy Staging -> Device
 	const auto& cmd = m_command.getBuffer(0);
 	
 	cmd.reset();
@@ -54,7 +72,6 @@ Renderer::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageF
 	cmd.copyBuffer(*sBuf, *dBuf, region);
 	cmd.end();
 
-	// 5. Submit & Wait
 	const vk::SubmitInfo submitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*cmd };
 	m_device.graphicsQueue().submit(submitInfo, nullptr);
 	m_device.graphicsQueue().waitIdle();
@@ -66,17 +83,14 @@ void Renderer::uploadMesh(Mesh& mesh)
 {
 	if (mesh.vertices.empty()) return;
 
-	// 1. Upload Vertices
 	auto [vBuf, vMem] = uploadToDevice(
 		mesh.vertices.data(), 
 		sizeof(Vertex) * mesh.vertices.size(), 
 		vk::BufferUsageFlagBits::eVertexBuffer
 	);
-	// Move into Mesh (Correct order is handled by Mesh members now)
 	mesh.vertexBuffer = std::move(vBuf);
 	mesh.vertexMemory = std::move(vMem);
 
-	// 2. Upload Indices
 	if (!mesh.indices.empty()) {
 		auto [iBuf, iMem] = uploadToDevice(
 			mesh.indices.data(), 
@@ -86,18 +100,13 @@ void Renderer::uploadMesh(Mesh& mesh)
 		mesh.indexBuffer = std::move(iBuf);
 		mesh.indexMemory = std::move(iMem);
 	}
-
-	LOG_DEBUG("Mesh uploaded: " << mesh.vertices.size() << " verts, " << mesh.indices.size() << " indices");
+	LOG_DEBUG("Mesh uploaded");
 }
 
-void Renderer::draw(const Mesh& mesh)
+bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore)
 {
-	// 1. Wait
-	auto& fence = m_sync.getInFlightFence(m_currentFrame);
-	(void)m_device.device().waitForFences({*fence}, vk::True, UINT64_MAX);
-
-	// 2. Acquire
-	auto& imgSem = m_sync.getImageAvailableSemaphore(m_currentFrame);
+	// 1. Acquire Image
+	auto& imgSem = m_imageAvailableSemaphores[currentFrame];
 	uint32_t imageIndex;
 	try {
 		auto result = m_device.device().acquireNextImage2KHR({
@@ -109,25 +118,42 @@ void Renderer::draw(const Mesh& mesh)
 		imageIndex = result.second;
 	} catch (const vk::OutOfDateKHRError&) {
 		recreateSwapchain();
-		return;
+		return false; // Fence NOT reset, loop will retry immediately
 	}
 
-	m_device.device().resetFences({*fence});
+	// 2. Reset Fence (Only now that we know we are submitting)
+	m_device.device().resetFences({fence});
 
 	// 3. Record
-	const auto& cmd = m_command.getBuffer(m_currentFrame);
+	const auto& cmd = m_command.getBuffer(currentFrame);
 	recordCommands(cmd, imageIndex, mesh);
 
 	// 4. Submit
-	auto& renderSem = m_sync.getRenderFinishedSemaphore(imageIndex);
-	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-	
+	// CHANGE: Use imageIndex instead of currentFrame for the signal semaphore
+	auto& renderSem = m_renderFinishedSemaphores[imageIndex];
+
+	std::vector<vk::Semaphore> waitSems;
+	std::vector<vk::PipelineStageFlags> waitStages;
+
+	// Internal Wait
+	waitSems.push_back(*imgSem);
+	waitStages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+	// External Wait
+	if (waitSemaphore) {
+		waitSems.push_back(*waitSemaphore);
+		waitStages.push_back(vk::PipelineStageFlagBits::eVertexInput); 
+	}
+
 	const vk::SubmitInfo submitInfo {
-		.waitSemaphoreCount = 1, .pWaitSemaphores = &*imgSem, .pWaitDstStageMask = &waitStage,
+		.waitSemaphoreCount = static_cast<uint32_t>(waitSems.size()),
+		.pWaitSemaphores = waitSems.data(),
+		.pWaitDstStageMask = waitStages.data(),
 		.commandBufferCount = 1, .pCommandBuffers = &*cmd,
-		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem
+		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem // Using imageIndex
 	};
-	m_device.graphicsQueue().submit(submitInfo, *fence);
+
+	m_device.graphicsQueue().submit(submitInfo, fence);
 
 	// 5. Present
 	try {
@@ -140,8 +166,8 @@ void Renderer::draw(const Mesh& mesh)
 	} catch (const vk::OutOfDateKHRError&) {
 		recreateSwapchain();
 	}
-
-	m_currentFrame = VulkanCommand::advanceFrame(m_currentFrame);
+	
+	return true;
 }
 
 void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)
