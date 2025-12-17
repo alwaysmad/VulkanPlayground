@@ -8,7 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanInstance(appName, glfwContext),
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
-	vulkanCommand(vulkanDevice, Renderer::MAX_FRAMES_IN_FLIGHT),
+	vulkanCommand(vulkanDevice, VulkanCommand::MAX_FRAMES_IN_FLIGHT),
 	renderer(vulkanDevice, vulkanWindow, vulkanCommand)
 {
 	LOG_DEBUG("VulkanApplication instance created");
