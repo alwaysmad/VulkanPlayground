@@ -16,7 +16,6 @@ private:
 	const VulkanDevice& m_device;
 	VulkanCommand m_command; 
 
-	// Updated Return Type
 	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> 
 	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 };

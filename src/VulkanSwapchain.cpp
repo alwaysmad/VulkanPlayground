@@ -55,20 +55,19 @@ VulkanSwapchain::VulkanSwapchain(const VulkanDevice& device, const VulkanWindow&
 }
 
 VulkanSwapchain::~VulkanSwapchain()
-{
-	LOG_DEBUG("VulkanSwapchain instance destroyed");
-}
+	{ LOG_DEBUG("VulkanSwapchain instance destroyed"); }
 
 void VulkanSwapchain::recreate()
 {
-	// Handle minimization (extent is 0,0)
+	// Handle minimization (extent is 0,0) and absurdly tiny sizes
 	vk::Extent2D extent = m_window.getExtent();
-	while (extent.width == 0 || extent.height == 0)
+	while (extent.width <= 1 || extent.height <= 1)
 	{
 		extent = m_window.getExtent();
 		m_window.waitEvents();
 	}
-
+	
+	m_window.pollEvents();
 	m_device.device().waitIdle(); // Ensure GPU is done before destroying old swapchain
 
 	// RAII handles destruction of old m_swapchain and m_imageViews here
@@ -175,7 +174,8 @@ void VulkanSwapchain::createSwapchain()
 		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
 		.presentMode = presentMode,
 		.clipped = vk::True,
-		.oldSwapchain = nullptr 
+		// We capture the handle of the current swapchain (if it exists) before we overwrite it.
+		.oldSwapchain = (*m_swapchain) ? *m_swapchain : nullptr
 	};
 
 	// 6. Create

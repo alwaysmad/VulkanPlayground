@@ -5,7 +5,6 @@
 
 VulkanLoader::VulkanLoader(const VulkanDevice& device)
 	: m_device(device),
-	  // Initialize Command Pool for TRANSFER queue
 	  m_command(device, device.getTransferQueueIndex()) 
 	{ LOG_DEBUG("VulkanLoader initialized"); }
 
@@ -46,7 +45,6 @@ VulkanLoader::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUs
 	m_device.transferQueue().submit(submitInfo, nullptr);
 	m_device.transferQueue().waitIdle();
 
-	// Staging memory (sMem) is destroyed here -> Allocation Count decrements
 	return { std::move(dBuf), std::move(dMem) };
 }
 
@@ -56,7 +54,7 @@ void VulkanLoader::uploadMesh(Mesh& mesh)
 		{ throw std::runtime_error("Trying to upload empty mesh"); }
 	auto [vBuf, vMem] = uploadToDevice(
 		mesh.vertices.data(), 
-		sizeof(Vertex) * mesh.vertices.size(), 
+		VertexTraits::bindingDescription.stride * mesh.vertices.size(), 
 		vk::BufferUsageFlagBits::eVertexBuffer
 	);
 	mesh.vertexBuffer = std::move(vBuf);
