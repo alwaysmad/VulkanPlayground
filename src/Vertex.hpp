@@ -1,13 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/packing.hpp>
-#include <array>
-#include <algorithm>
-#include <cmath>
-#include <cstddef> // Required for offsetof
-
 struct Vertex
 {
 	// 1. Position + Var1 (Packed into 4x 16-bit SNORM) -> 8 bytes

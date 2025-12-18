@@ -1,6 +1,4 @@
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
-#include <glm/glm.hpp>
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "VulkanCommand.hpp" 

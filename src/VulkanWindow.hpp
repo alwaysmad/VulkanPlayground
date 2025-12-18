@@ -1,11 +1,6 @@
 // src/VulkanWindow.hpp
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
-#include <GLFW/glfw3.h>
-#include <string>
 #include "VulkanInstance.hpp"
-#include "VulkanWindow.hpp"
-#include "DebugOutput.hpp"
 
 class VulkanWindow
 {

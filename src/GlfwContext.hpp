@@ -1,9 +1,5 @@
 // src/GlfwContext.hpp
 #pragma once
-#include <stdexcept>
-#include <GLFW/glfw3.h>
-#include <vector>
-#include "DebugOutput.hpp"
 
 class GlfwContext
 {

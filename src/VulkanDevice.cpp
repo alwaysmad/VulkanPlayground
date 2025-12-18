@@ -2,9 +2,6 @@
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
-#include "DebugOutput.hpp"
-#include <set>
-#include <vector>
 
 static constexpr std::array requiredDeviceExtensions = { 
 	vk::KHRSwapchainExtensionName,

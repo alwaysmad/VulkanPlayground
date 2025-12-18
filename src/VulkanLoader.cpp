@@ -1,7 +1,4 @@
-#include <cstring>
-
 #include "VulkanLoader.hpp"
-#include "DebugOutput.hpp"
 
 VulkanLoader::VulkanLoader(const VulkanDevice& device)
 	: m_device(device),

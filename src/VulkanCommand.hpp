@@ -1,7 +1,5 @@
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
 #include "VulkanDevice.hpp"
-#include "DebugOutput.hpp"
 
 class VulkanCommand
 {

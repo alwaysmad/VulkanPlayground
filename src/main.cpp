@@ -1,8 +1,4 @@
-#include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-                                                           
 #include "VulkanApplication.hpp"
-#include "DebugOutput.hpp" // for console colors
-#include <cstdlib> // For EXIT_SUCCESS and EXIT_FAILURE
 
 constexpr auto AppName = "SimpleVK";
 

@@ -2,7 +2,6 @@
 #include "Mesh.hpp"
 #include "DebugOutput.hpp"
 #include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT
-#include <cmath> // for sin/cos
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),

@@ -1,8 +1,5 @@
 // src/VulkanInstance.hpp
 #pragma once
-#include <vulkan/vulkan_raii.hpp> // For everything Vulkan
-#include <vector>
-#include <fstream> // for file output
 
 class VulkanInstance {
 public:

@@ -1,6 +1,4 @@
 #pragma once
-#include <vector>
-#include <vulkan/vulkan_raii.hpp>
 #include "Vertex.hpp"
 
 class Mesh

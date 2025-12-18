@@ -1,9 +1,5 @@
 // src/VulkanDevice.hpp
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
-#include <atomic>
-#include <iostream>
-#include "DebugOutput.hpp"
 
 // Forward declaration
 class VulkanDevice;

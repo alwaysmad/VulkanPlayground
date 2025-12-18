@@ -1,7 +1,5 @@
 // src/VulkanInstance.cpp
 #include "VulkanInstance.hpp"
-#include "DebugOutput.hpp"
-#include <iostream>
 
 static constexpr const char* engineName = "SimpleVK";
 

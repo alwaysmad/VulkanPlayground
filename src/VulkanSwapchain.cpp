@@ -1,10 +1,6 @@
 #include "VulkanSwapchain.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanWindow.hpp"
-#include "DebugOutput.hpp"
-#include <limits> // Necessary for std::numeric_limits
-#include <algorithm> // Necessary for std::clamp
-#include <set> // Required for std::set
 
 static inline vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats)
 {

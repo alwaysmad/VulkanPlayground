@@ -1,7 +1,6 @@
 #include "VulkanPipeline.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanSwapchain.hpp"
-#include "DebugOutput.hpp"
 #include "Vertex.hpp"
 #include "Uniforms.hpp"
 

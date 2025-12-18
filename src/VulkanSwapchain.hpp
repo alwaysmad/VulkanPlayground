@@ -1,7 +1,4 @@
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
-#include <vector>
-#include <array>
 
 // Forward declarations to avoid circular includes
 class VulkanDevice;
