@@ -4,6 +4,7 @@
 #include "DebugOutput.hpp"
 #include <limits> // Necessary for std::numeric_limits
 #include <algorithm> // Necessary for std::clamp
+#include <set> // Required for std::set
 
 static inline vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats)
 {
@@ -139,19 +140,23 @@ void VulkanSwapchain::createSwapchain()
 	// Target 3 images, but clamp to valid range
 	const uint32_t imageCount = std::clamp(3u, caps.minImageCount, maxImages);	
 
-	// 4. Sharing Mode (Graphics vs Present queues)
-	const uint32_t queueFamilyIndices[] = { m_device.getGraphicsQueueIndex(), m_device.getPresentQueueIndex() };
+	// 4. Sharing Mode (ROBUST IMPLEMENTATION)
+	// We gather ALL unique queue families that might access the swapchain.
+	// This ensures that Graphics, Present, AND Compute/Transfer can all use the image without barriers.
+	const std::set<uint32_t> uniqueQueueFamilies = {
+		m_device.getGraphicsQueueIndex(),
+		m_device.getPresentQueueIndex()
+	};
+
+	std::vector<uint32_t> queueFamilyIndices(uniqueQueueFamilies.begin(), uniqueQueueFamilies.end());
 
 	vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-	uint32_t indexCount = 0;
-	const uint32_t* pIndices = nullptr;
-
-	// If queues are different a more advanced logic is required
-	if (queueFamilyIndices[0] != queueFamilyIndices[1])
+	
+	if (queueFamilyIndices.size() > 1)
 	{
+		// If more than one distinct queue family is involved, use Concurrent.
+		// This avoids the complexity of Ownership Transfer Barriers.
 		sharingMode = vk::SharingMode::eConcurrent;
-		indexCount = 2;
-		pIndices = queueFamilyIndices;
 	}
 
 	// 5. Create Info
@@ -162,15 +167,15 @@ void VulkanSwapchain::createSwapchain()
 		.imageColorSpace = surfaceFormat.colorSpace,
 		.imageExtent = extent,
 		.imageArrayLayers = 1,
-		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst, // Added TransferDst just in case (e.g. clearing)
 		.imageSharingMode = sharingMode,
-		.queueFamilyIndexCount = indexCount,
-		.pQueueFamilyIndices = pIndices,
+		.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
+		.pQueueFamilyIndices = queueFamilyIndices.data(),
 		.preTransform = caps.currentTransform,
 		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
 		.presentMode = presentMode,
 		.clipped = vk::True,
-		.oldSwapchain = nullptr // For now, simple recreation implies destroying old one first
+		.oldSwapchain = nullptr 
 	};
 
 	// 6. Create

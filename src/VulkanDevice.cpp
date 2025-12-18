@@ -200,10 +200,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 		if ((flags & vk::QueueFlagBits::eTransfer) &&
 			!(flags & vk::QueueFlagBits::eGraphics) &&
 			!(flags & vk::QueueFlagBits::eCompute))
-		{
-			transferQueueIndex = i;
-			break;
-		}
+			{ transferQueueIndex = i; break; }
 	}
 	// Fallback: Use Compute queue (often supports transfer)
 	if (transferQueueIndex == UINT32_MAX && computeQueueIndex != UINT32_MAX)

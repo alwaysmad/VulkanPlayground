@@ -83,11 +83,8 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 			.deviceMask = 1
 		});
 		imageIndex = result.second;
-	} catch (const vk::OutOfDateKHRError&) {
-		recreateSwapchain();
-		submitDummy(fence, waitSemaphore);
-		return;
-	}
+	} catch (const vk::OutOfDateKHRError&)
+		{ recreateSwapchain(); submitDummy(fence, waitSemaphore); return; }
 
 	// 2. Reset Fence
 	// We are about to submit work that will signal the fence.
@@ -103,7 +100,7 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 	auto& renderSem = m_renderFinishedSemaphores[imageIndex];
 
 	// Define stages statically (Fixed mapping: Index 0 = Color, Index 1 = Vertex)
-	static constexpr std::array<vk::PipelineStageFlags, 2> waitStages = {
+	constexpr std::array<vk::PipelineStageFlags, 2> waitStages = {
 		vk::PipelineStageFlagBits::eColorAttachmentOutput,
 		vk::PipelineStageFlagBits::eVertexInput
 	};
@@ -134,9 +131,8 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 			.pImageIndices = &imageIndex
 		});
 		if (result == vk::Result::eSuboptimalKHR) { recreateSwapchain(); }
-	} catch (const vk::OutOfDateKHRError&) {
-		recreateSwapchain();
-	}
+	} catch (const vk::OutOfDateKHRError&)
+		{ recreateSwapchain(); }
 }
 
 void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)
@@ -159,9 +155,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
-			.baseMipLevel = 0, .levelCount = 1,
-			.baseArrayLayer = 0, .layerCount = 1 }
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &preRenderBarrier });
 
@@ -196,10 +190,14 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 
 	// Barrier: Color Attachment -> Present
 	const vk::ImageMemoryBarrier2 postRenderBarrier {
+		// We must wait for rendering to finish
 		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
 		.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+		
+		// BottomOfPipe is correct here: we just need to finish before the batch ends.
 		.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
 		.dstAccessMask = vk::AccessFlagBits2::eNone, 
+		
 		.oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.newLayout = vk::ImageLayout::ePresentSrcKHR,
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,

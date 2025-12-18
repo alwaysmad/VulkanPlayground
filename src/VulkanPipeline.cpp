@@ -143,6 +143,4 @@ VulkanPipeline::VulkanPipeline(
 }
 
 VulkanPipeline::~VulkanPipeline()
-{
-	LOG_DEBUG("Graphics Pipeline destroyed");
-}
+	{ LOG_DEBUG("Graphics Pipeline destroyed"); }

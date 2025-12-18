@@ -12,7 +12,6 @@ class VulkanDevice;
 class TrackedDeviceMemory
 {
 public:
-	// 1. Exemplary Usage: Public Static Atomic Counter
 	inline static std::atomic<uint32_t> allocationCount { 0 };
 
 	// Constructors
@@ -20,15 +19,16 @@ public:
 	
 	explicit TrackedDeviceMemory(vk::raii::DeviceMemory&& mem) 
 		: m_memory(std::move(mem)) 
-	{ if (*m_memory) allocationCount++; }
+		{ if (*m_memory) allocationCount++; }
 
 	~TrackedDeviceMemory() { if (*m_memory) allocationCount--; }
 
 	TrackedDeviceMemory(TrackedDeviceMemory&& other) noexcept 
 		: m_memory(std::move(other.m_memory)) {}
 
-	TrackedDeviceMemory& operator=(TrackedDeviceMemory&& other) noexcept {
-		if (this != &other) {
+	TrackedDeviceMemory& operator= (TrackedDeviceMemory&& other) noexcept {
+		if (this != &other)
+		{
 			if (*m_memory) { allocationCount--; }
 			m_memory = std::move(other.m_memory);
 		}
@@ -80,7 +80,6 @@ public:
 	inline uint32_t getComputeQueueIndex() const { return computeQueueIndex; }
 	inline uint32_t getTransferQueueIndex() const { return transferQueueIndex; }
 
-	// CHANGE: Return type is now the Tracked Memory
 	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> createBuffer (
 			vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
