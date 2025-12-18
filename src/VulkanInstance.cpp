@@ -2,11 +2,10 @@
 #include "VulkanInstance.hpp"
 #include "DebugOutput.hpp"
 #include <iostream>
-#include <array>
 
-static constexpr const char* engineName = {"SimpleVK"};
+static constexpr const char* engineName = "SimpleVK";
 
-static constexpr const char* validationLayersName = { "VK_LAYER_KHRONOS_validation" };
+static constexpr const char* validationLayersName = "VK_LAYER_KHRONOS_validation";
 
 std::ofstream VulkanInstance::logFile;
 

@@ -55,31 +55,20 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
-		// 1. CPU Wait
 		auto& fence = m_inFlightFences[currentFrame];
 		
-		// If we are about to submit to this frame slot, we must wait for it to be free.
-		// However, if we skip submission (draw returns false), we didn't use the slot,
-		// so we shouldn't wait/reset blindly next time unless we tracked that.
-		// BUT: waitForFences on a signaled fence is instant, so it's safe to call.
 		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)
 			{ throw std::runtime_error("Fence wait failed"); }
 
-		// 2. Render
-		// We pass the fence. draw() will reset it ONLY if it submits.
-		if (renderer.draw(m_mesh, currentFrame, *fence))
-		{
-			// SUCCESS: The fence is now unsignaled (GPU working).
-			// We can move to the next frame slot.
-			currentFrame = VulkanCommand::advanceFrame(currentFrame);
-		}
-		else
-		{
-			// FAILURE (Swapchain Recreated): 
-			// The fence was NOT reset (still signaled). 
-			// We DO NOT advance currentFrame.
-			// Next loop iteration will check the same fence (instant success) and retry draw().
-		}
+		// 1. Compute Step (Future)
+		// ... compute(..., fence) ...
+
+		// 2. Render Step (Optional)
+		// Renderer now guarantees 'fence' is signaled even if it skips drawing.
+		renderer.draw(m_mesh, currentFrame, *fence);
+		
+		// 3. Flow Guaranteed: Always advance
+		currentFrame = VulkanCommand::advanceFrame(currentFrame);
 	}
 	return EXIT_SUCCESS;
 }

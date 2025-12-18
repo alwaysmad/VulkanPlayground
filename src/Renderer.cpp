@@ -3,8 +3,8 @@
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
 
-Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window)
-	: m_device(device), 
+Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
+	m_device(device), 
 	m_window(window),
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
@@ -25,13 +25,13 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window)
 
 void Renderer::remakeRenderFinishedSemaphores()
 {
-	size_t imageCount = m_swapchain.getImages().size();
+	const uint32_t imageCount = m_swapchain.getImages().size();
 	// Re-create semaphores if image count changed
 	if (m_renderFinishedSemaphores.size() != imageCount)
 	{
 		m_renderFinishedSemaphores.clear();
 		constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
-		for (size_t i = 0; i < imageCount; ++i)
+		for (uint32_t i = 0; i < imageCount; ++i)
 			{ m_renderFinishedSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
 	}
 }
@@ -44,13 +44,39 @@ void Renderer::recreateSwapchain()
 	remakeRenderFinishedSemaphores();
 }
 
-bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fence, const vk::Semaphore* waitSemaphore)
+void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 {
+	// must reset the fence before submitting
+	m_device.device().resetFences({fence});
+
+	constexpr vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eAllCommands;
+	
+	const vk::SubmitInfo submitInfo {
+		// If waitSemaphore exists, wait for it.
+		.waitSemaphoreCount = waitSemaphore ? 1u : 0u,
+		.pWaitSemaphores = waitSemaphore ? &waitSemaphore : nullptr,
+		.pWaitDstStageMask = waitSemaphore ? &waitStage : nullptr,
+		.commandBufferCount = 0, 
+		.signalSemaphoreCount = 0
+	};
+	
+	// Must signal 'fence' so the CPU knows this "frame" is done
+	m_device.graphicsQueue().submit(submitInfo, fence);
+}
+
+void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore)
+{
+	// 0. Check for Minimization
+	const auto extent = m_window.getExtent();
+	if (extent.width == 0 || extent.height == 0)
+		{ submitDummy(fence, waitSemaphore); return; }
+
 	// 1. Acquire Image
+	// Waits for 'imgSem' to be signaled when the presentation engine releases an image
 	auto& imgSem = m_imageAvailableSemaphores[currentFrame];
 	uint32_t imageIndex;
 	try {
-		auto result = m_device.device().acquireNextImage2KHR({
+		const auto result = m_device.device().acquireNextImage2KHR({
 			.swapchain = *m_swapchain.getSwapchain(),
 			.timeout = UINT64_MAX,
 			.semaphore = *imgSem,
@@ -59,10 +85,13 @@ bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fe
 		imageIndex = result.second;
 	} catch (const vk::OutOfDateKHRError&) {
 		recreateSwapchain();
-		return false; // Fence NOT reset, loop will retry immediately
+		submitDummy(fence, waitSemaphore);
+		return;
 	}
 
-	// 2. Reset Fence (Only now that we know we are submitting)
+	// 2. Reset Fence
+	// We are about to submit work that will signal the fence.
+	// We must reset it before submission.
 	m_device.device().resetFences({fence});
 
 	// 3. Record
@@ -70,45 +99,44 @@ bool Renderer::draw(const Mesh& mesh, uint32_t currentFrame, const vk::Fence& fe
 	recordCommands(cmd, imageIndex, mesh);
 
 	// 4. Submit
+	// Signals 'renderSem' when rendering finishes, so Present can start.
 	auto& renderSem = m_renderFinishedSemaphores[imageIndex];
-	// Max wait semaphores = 2 (1 for Swapchain, 1 optional for Compute/External)
-	std::array<vk::Semaphore, 2> waitSems;
-	std::array<vk::PipelineStageFlags, 2> waitStages;
-	uint32_t waitCount = 0;
 
-	// Internal Wait (Always present)
-	waitSems[waitCount] = *imgSem;
-	waitStages[waitCount] = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-	waitCount++;
+	// Define stages statically (Fixed mapping: Index 0 = Color, Index 1 = Vertex)
+	static constexpr std::array<vk::PipelineStageFlags, 2> waitStages = {
+		vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		vk::PipelineStageFlagBits::eVertexInput
+	};
 
-	// External Wait (Optional)
-	if (waitSemaphore) {
-		waitSems[waitCount] = *waitSemaphore;
-		waitStages[waitCount] = vk::PipelineStageFlagBits::eVertexInput; 
-		waitCount++;
-	}
+	// If waitSemaphore is null, it sits harmlessly at index 1 because waitCount will be 1.
+	const std::array<vk::Semaphore, 2> waitSems = { *imgSem, waitSemaphore };
 
 	const vk::SubmitInfo submitInfo {
-		.waitSemaphoreCount = waitCount,
+		.waitSemaphoreCount = waitSemaphore ? 2u : 1u,
 		.pWaitSemaphores = waitSems.data(),
 		.pWaitDstStageMask = waitStages.data(),
 		.commandBufferCount = 1, .pCommandBuffers = &*cmd,
 		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem
 	};
 
+	// COMMENT: Submit to queue.
+	// - Waits on 'waitSems'
+	// - Signals 'renderSem'
+	// - Signals 'fence' when ALL work is done (for CPU sync)
 	m_device.graphicsQueue().submit(submitInfo, fence);
 
 	// 5. Present
 	try {
-		auto result = m_device.presentQueue().presentKHR({
+		const auto result = m_device.presentQueue().presentKHR({
+			// COMMENT: Wait for Rendering to finish before showing image
 			.waitSemaphoreCount = 1, .pWaitSemaphores = &*renderSem,
 			.swapchainCount = 1, .pSwapchains = &*m_swapchain.getSwapchain(),
 			.pImageIndices = &imageIndex
 		});
 		if (result == vk::Result::eSuboptimalKHR) { recreateSwapchain(); }
-	} catch (const vk::OutOfDateKHRError&) { recreateSwapchain(); }
-	
-	return true;
+	} catch (const vk::OutOfDateKHRError&) {
+		recreateSwapchain();
+	}
 }
 
 void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)
