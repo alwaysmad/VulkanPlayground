@@ -1,7 +1,7 @@
 #include "VulkanApplication.hpp"
 #include "Mesh.hpp"
 #include "DebugOutput.hpp"
-#include "VulkanCommand.hpp" // for MAX_FRAMES
+#include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),
@@ -20,25 +20,36 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	LOG_DEBUG("VulkanApplication instance created");
 }
 
-VulkanApplication::~VulkanApplication() { LOG_DEBUG("VulkanApplication instance destroyed"); }
+VulkanApplication::~VulkanApplication()
+{
+	// Wait for GPU to finish all work
+	// This protects members from being destroyed while still in use
+	vulkanDevice.device().waitIdle();
+	LOG_DEBUG("VulkanApplication instance destroyed");
+}
+
+void VulkanApplication::fillMesh()
+{
+	m_mesh.vertices = {
+		Vertex(std::array<float, 8>{-0.5f, -0.5f, 0.0f, 0,  1, 0, 0, 0}), // 0 
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, 0.0f, 0,  0, 1, 0, 0}), // 1
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0,  0, 0, 1, 0}), // 2
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0,  1, 1, 1, 0}), // 3
+	};
+	m_mesh.indices = { 0, 1, 2, 2, 3, 0 }; 
+}
 
 int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication started run()");
 
-	Mesh myMesh;
-	myMesh.vertices = {
-		Vertex(std::array<float, 8>{-0.5f, -0.5f, 0.0f, 0,  1, 0, 0, 0}),
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, 0.0f, 0,  0, 1, 0, 0}),
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0,  0, 0, 1, 0}),
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0,  1, 1, 1, 0})
-	};
-	myMesh.indices = { 0, 1, 2, 2, 3, 0 }; 
-
-	vulkanLoader.uploadMesh(myMesh);
+	// 1. Prepare Data
+	fillMesh();
+	vulkanLoader.uploadMesh(m_mesh);
 
 	uint32_t currentFrame = 0;
 
+	// 2. Loop
 	while (!vulkanWindow.shouldClose())
 	{
 		vulkanWindow.pollEvents();
@@ -56,7 +67,7 @@ int VulkanApplication::run()
 
 		// 2. Render
 		// We pass the fence. draw() will reset it ONLY if it submits.
-		if (renderer.draw(myMesh, currentFrame, *fence))
+		if (renderer.draw(m_mesh, currentFrame, *fence))
 		{
 			// SUCCESS: The fence is now unsignaled (GPU working).
 			// We can move to the next frame slot.
@@ -70,7 +81,5 @@ int VulkanApplication::run()
 			// Next loop iteration will check the same fence (instant success) and retry draw().
 		}
 	}
-	
-	vulkanDevice.device().waitIdle();
 	return EXIT_SUCCESS;
 }

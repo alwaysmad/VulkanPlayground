@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "VulkanLoader.hpp"
 #include "DebugOutput.hpp"
 
@@ -13,13 +15,12 @@ std::pair<vk::raii::Buffer, TrackedDeviceMemory>
 VulkanLoader::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage)
 {
 	// 1. Staging
-	// Note: stagingResult.second is now TrackedDeviceMemory.
 	// We rely on auto/structured binding to handle the types.
 	auto stagingResult = m_device.createBuffer(size, 
 		vk::BufferUsageFlagBits::eTransferSrc,
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 	
-	// Move into local vars (types deduced automatically)
+	// Move into local vars
 	auto sMem = std::move(stagingResult.second); 
 	auto sBuf = std::move(stagingResult.first);
 
@@ -29,7 +30,6 @@ VulkanLoader::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUs
 	sMem->unmapMemory();
 
 	// 2. GPU Buffer
-	// auto [dBuf, dMem] works perfectly here too
 	auto [dBuf, dMem] = m_device.createBuffer(size, 
 		vk::BufferUsageFlagBits::eTransferDst | usage, 
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -52,8 +52,8 @@ VulkanLoader::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUs
 
 void VulkanLoader::uploadMesh(Mesh& mesh)
 {
-	if (mesh.vertices.empty()) return;
-
+	if (mesh.vertices.empty()) 
+		{ throw std::runtime_error("Trying to upload empty mesh"); }
 	auto [vBuf, vMem] = uploadToDevice(
 		mesh.vertices.data(), 
 		sizeof(Vertex) * mesh.vertices.size(), 

@@ -52,6 +52,10 @@ target_precompile_headers(simplevk PRIVATE
 	<fstream>
 	<limits>
 	<algorithm>
+	<cstring>             # For memcpy, strcmp
+	<atomic>              # For TrackedDeviceMemory
+	<glm/glm.hpp>         # Heavy template library
+	<glm/gtc/packing.hpp> # Heavy template library
 )
 
 # Compile the shaders
