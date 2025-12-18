@@ -59,19 +59,20 @@ VulkanSwapchain::~VulkanSwapchain()
 
 void VulkanSwapchain::recreate()
 {
-	// Handle minimization (extent is 0,0) and absurdly tiny sizes
 	vk::Extent2D extent = m_window.getExtent();
+
+	// PRAGMATIC FIX: Blame the Window Manager.
+	// We simply block the thread until the window provides a usable size.
+	// This avoids the "Resize Storm" crash and 0-sized surface errors.
 	while (extent.width <= 1 || extent.height <= 1)
 	{
+		m_window.waitEvents(); // Blocks CPU until OS sends an event
 		extent = m_window.getExtent();
-		m_window.waitEvents();
 	}
-	
-	m_window.pollEvents();
-	m_device.device().waitIdle(); // Ensure GPU is done before destroying old swapchain
+
+	m_device.device().waitIdle(); 
 
 	// RAII handles destruction of old m_swapchain and m_imageViews here
-	// when we overwrite them with new objects.
 	createSwapchain();
 	createImageViews();
 	LOG_DEBUG("Swapchain recreated");
