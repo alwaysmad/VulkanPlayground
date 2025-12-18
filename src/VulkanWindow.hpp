@@ -3,23 +3,63 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <GLFW/glfw3.h>
 #include <string>
-
-class VulkanInstance;
+#include "VulkanInstance.hpp"
+#include "VulkanWindow.hpp"
+#include "DebugOutput.hpp"
 
 class VulkanWindow
 {
 public:
-	VulkanWindow(const VulkanInstance& instance, uint32_t width, uint32_t height, const std::string& name);
-	~VulkanWindow();
+	VulkanWindow(const VulkanInstance& instance, uint32_t width, uint32_t height, const std::string& name) :
+		window(nullptr), surface(nullptr), m_lastTime(0.0), m_nbFrames(0)
+	{
+		window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
+		if (!window)
+		throw std::runtime_error("Failed to create GLFW window");
 
-	// New Helper: Handles time checking and window title updating
-	void updateFPS(const std::string& titlePrefix);
+		VkSurfaceKHR _surface;
+		if (glfwCreateWindowSurface(*instance.getInstance(), window, nullptr, &_surface) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create window surface");
+
+		surface = vk::raii::SurfaceKHR(instance.getInstance(), _surface);
+
+		// Initialize time
+		m_lastTime = glfwGetTime();
+
+		LOG_DEBUG("Window and Surface created");
+	}
+	
+	~VulkanWindow()
+	{
+		if (window) glfwDestroyWindow(window);
+		LOG_DEBUG("Window and Surface destroyed");
+	}
+
+	void updateFPS(const std::string& titlePrefix)
+	{
+		double currentTime = glfwGetTime();
+		m_nbFrames++;
+		if (currentTime - m_lastTime >= 1.0)
+		{
+			std::string title = titlePrefix + " - " + std::to_string(m_nbFrames) + " FPS";
+			glfwSetWindowTitle(window, title.c_str());
+			m_nbFrames = 0;
+			m_lastTime = currentTime;
+		}
+	}
 
 	inline const vk::raii::SurfaceKHR& getSurface() const { return surface; }
 	inline bool shouldClose() const { return glfwWindowShouldClose(window); }
 	inline void waitEvents() const { glfwWaitEvents(); }
 	inline void pollEvents() const { glfwPollEvents(); }
-	vk::Extent2D getExtent() const; 
+
+	inline vk::Extent2D getExtent() const
+	{
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+		return vk::Extent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+	}
+
 	inline void setWindowTitle(const std::string& title) { glfwSetWindowTitle(window, title.c_str()); }
 	inline double getTime() const { return glfwGetTime(); }
 

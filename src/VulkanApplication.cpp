@@ -2,6 +2,7 @@
 #include "Mesh.hpp"
 #include "DebugOutput.hpp"
 #include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT
+#include <cmath> // for sin/cos
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),
@@ -30,13 +31,29 @@ VulkanApplication::~VulkanApplication()
 
 void VulkanApplication::fillMesh()
 {
+	// A simple unit cube (radius 0.5) with colors
+	// Position (x,y,z,w) | Color (r,g,b,a)
 	m_mesh.vertices = {
-		Vertex(std::array<float, 8>{-0.5f, -0.5f, 0.0f, 0,  1, 0, 0, 0}), // 0 
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, 0.0f, 0,  0, 1, 0, 0}), // 1
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, 0.0f, 0,  0, 0, 1, 0}), // 2
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, 0.0f, 0,  1, 1, 1, 0}), // 3
+		// Front Face (Z = -0.5)
+		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 0: Red
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 1: Green
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 2: Blue
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 3: Yellow
+		// Back Face (Z = +0.5)
+		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f}), // 4: Cyan
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: Magenta
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: White
+		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f})  // 7: Black
 	};
-	m_mesh.indices = { 0, 1, 2, 2, 3, 0 }; 
+
+	m_mesh.indices = {
+		0, 1, 2, 2, 3, 0, // Front
+		1, 5, 6, 6, 2, 1, // Right
+		5, 4, 7, 7, 6, 5, // Back
+		4, 0, 3, 3, 7, 4, // Left
+		3, 2, 6, 6, 7, 3, // Top
+		4, 5, 1, 1, 0, 4  // Bottom
+	};
 }
 
 int VulkanApplication::run()
@@ -55,6 +72,20 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
+		// --- Calculate Camera View ---
+		auto time = vulkanWindow.getTime();
+		float radius = 3.0f;
+		float camX = sin(time) * radius;
+		float camZ = cos(time) * radius;
+
+		// Orbiting around (0,0,0) at height 1.5
+		glm::mat4 view = glm::lookAt(
+			glm::vec3(camX, 1.5f, camZ), 
+			glm::vec3(0.0f, 0.0f, 0.0f), 
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+		// -----------------------------
+
 		auto& fence = m_inFlightFences[currentFrame];
 		
 		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)
@@ -65,7 +96,7 @@ int VulkanApplication::run()
 
 		// 2. Render Step (Optional)
 		// Renderer now guarantees 'fence' is signaled even if it skips drawing.
-		renderer.draw(m_mesh, currentFrame, *fence);
+		renderer.draw(m_mesh, currentFrame, *fence, {}, view);
 		
 		// 3. Flow Guaranteed: Always advance
 		currentFrame = VulkanCommand::advanceFrame(currentFrame);

@@ -5,7 +5,6 @@ add_executable(simplevk main.cpp)
 target_sources(simplevk PRIVATE
 	VulkanApplication.cpp
 	VulkanInstance.cpp
-	VulkanWindow.cpp
 	VulkanDevice.cpp
 	VulkanSwapchain.cpp
 	VulkanPipeline.cpp

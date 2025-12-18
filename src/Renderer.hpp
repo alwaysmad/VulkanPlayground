@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan_raii.hpp>
+#include <glm/glm.hpp>
 #include "VulkanSwapchain.hpp"
 #include "VulkanPipeline.hpp"
 #include "VulkanCommand.hpp" 
@@ -25,9 +26,26 @@ public:
 	// - waitSemaphore (Optional): 
 	//     If provided (not null), the Graphics Queue will wait for this semaphore 
 	//     (at Vertex Input stage) before processing. Used to sync Compute -> Graphics.
-	void draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore = {});
+	void draw(const Mesh& mesh,
+		  uint32_t currentFrame,
+		  vk::Fence fence,
+		  vk::Semaphore waitSemaphore = {},
+		  const glm::mat4& viewMatrix = defaultView);
 
 private:
+
+	// Default View: Eye(0, 1.5, 3), Center(0,0,0), Up(0,1,0)
+	// Precomputed values:
+	// cos(theta) = 3.0 / sqrt(1.5^2 + 3.0^2) = 0.894427
+	// sin(theta) = 1.5 / sqrt(1.5^2 + 3.0^2) = 0.447214
+	// Translation Z = -magnitude = -3.354102
+	static constexpr glm::mat4 defaultView = {
+		1.0f,       0.0f,       0.0f,       0.0f, // Col 0 (Right)
+		0.0f,       0.894427f,  0.447214f,  0.0f, // Col 1 (Up-ish)
+		0.0f,      -0.447214f,  0.894427f,  0.0f, // Col 2 (Forward-ish)
+		0.0f,       0.0f,      -3.354102f,  1.0f  // Col 3 (Translation)
+	};
+
 	const VulkanDevice& m_device;
 	const VulkanWindow& m_window;
 
@@ -43,7 +61,7 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh);
+	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix);
 	void recreateSwapchain();
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 

@@ -3,10 +3,11 @@
 #include "VulkanSwapchain.hpp"
 #include "DebugOutput.hpp"
 #include "Vertex.hpp"
+#include "Uniforms.hpp"
 
 #include "triangle.hpp" // The generated header
 
-static constexpr auto  pushConstantSize = 2 * sizeof(float); 
+static constexpr auto  pushConstantSize = sizeof(CameraPushConstants);
 
 [[nodiscard]] inline static vk::raii::ShaderModule createShaderModule(
 		const vk::raii::Device& device,

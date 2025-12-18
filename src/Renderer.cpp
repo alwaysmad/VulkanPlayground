@@ -2,6 +2,7 @@
 #include "VulkanDevice.hpp"
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
+#include "Uniforms.hpp"
 
 Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	m_device(device), 
@@ -64,7 +65,7 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 	m_device.graphicsQueue().submit(submitInfo, fence);
 }
 
-void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore)
+void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore, const glm::mat4& viewMatrix)
 {
 	// 0. Check for Minimization
 	const auto extent = m_window.getExtent();
@@ -93,7 +94,7 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 
 	// 3. Record
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordCommands(cmd, imageIndex, mesh);
+	recordCommands(cmd, imageIndex, mesh, viewMatrix);
 
 	// 4. Submit
 	// Signals 'renderSem' when rendering finishes, so Present can start.
@@ -135,7 +136,7 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 		{ recreateSwapchain(); }
 }
 
-void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh)
+void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix)
 {
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
@@ -155,7 +156,8 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &preRenderBarrier });
 
@@ -178,8 +180,17 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	const vk::Rect2D scissor { .extent = extent };
 	cmd.setScissor(0, scissor);
 
-	// upload screen axes scaling as push constants	
-	cmd.pushConstants<std::array<float, 2>>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_swapchain.getScale());
+	// --- Push camera and projection matrices ---
+	CameraPushConstants constants;
+	constants.view = viewMatrix;
+
+	// Calculate Projection based on current window aspect ratio
+	float aspect = (float)extent.width / (float)extent.height;
+	constants.proj = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+	constants.proj[1][1] *= -1; // Fix Vulkan Y-flip
+
+	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
+	// -------------------------
 
 	// bind mesh to command and order to draw it	
 	cmd.bindVertexBuffers(0, {*mesh.vertexBuffer}, {0});
