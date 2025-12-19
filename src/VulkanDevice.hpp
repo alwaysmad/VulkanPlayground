@@ -61,15 +61,13 @@ class VulkanDevice
 public:
 	VulkanDevice(const VulkanInstance&, const VulkanWindow&, const std::string&);
 
+	inline const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
 	inline const vk::raii::Device& device() const { return m_device; }
 	
-	// Queues
 	inline const vk::raii::Queue& graphicsQueue() const { return m_graphicsQueue; }
 	inline const vk::raii::Queue& presentQueue() const { return m_presentQueue; }
 	inline const vk::raii::Queue& computeQueue() const { return m_computeQueue; }
 	inline const vk::raii::Queue& transferQueue() const { return m_transferQueue; }
-
-	inline const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
 
 	inline uint32_t getGraphicsQueueIndex() const { return graphicsQueueIndex; }
 	inline uint32_t getPresentQueueIndex() const { return presentQueueIndex; }
@@ -80,6 +78,15 @@ public:
 			vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
 			vk::MemoryPropertyFlags properties ) const;
+
+	[[nodiscard]] std::pair<vk::raii::Image, TrackedDeviceMemory> createImage(
+			const vk::ImageCreateInfo& createInfo,
+			vk::MemoryPropertyFlags properties) const;
+	
+	vk::Format findSupportedFormat(
+			const std::vector<vk::Format>& candidates,
+			vk::ImageTiling tiling,
+			vk::FormatFeatureFlags features) const;
 
 private:
 	vk::raii::PhysicalDevice m_physicalDevice;

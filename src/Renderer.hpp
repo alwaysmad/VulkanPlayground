@@ -59,9 +59,17 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix);
+	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix = defaultView);
 	void recreateSwapchain();
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
 	static constexpr std::array<float, 4> backgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
+
+	// Depth Resources
+	vk::raii::Image     m_depthImage = nullptr;
+	TrackedDeviceMemory m_depthMemory;
+	vk::raii::ImageView m_depthView = nullptr;
+	vk::Format          m_depthFormat;
+
+	void createDepthBuffer();
 };

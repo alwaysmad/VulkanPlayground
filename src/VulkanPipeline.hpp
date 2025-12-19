@@ -6,8 +6,7 @@ class VulkanSwapchain;
 class VulkanPipeline
 {
 public:
-	VulkanPipeline(const VulkanDevice&, 
-			const VulkanSwapchain&);
+	VulkanPipeline(const VulkanDevice&, const VulkanSwapchain&, vk::Format depthFormat);
 
 	~VulkanPipeline();
 

@@ -338,3 +338,49 @@ std::pair<vk::raii::Buffer, TrackedDeviceMemory> VulkanDevice::createBuffer(
 	// 6. Return Wrapped
 	return { std::move(buffer), TrackedDeviceMemory(std::move(memory)) };
 }
+
+std::pair<vk::raii::Image, TrackedDeviceMemory> VulkanDevice::createImage(
+		const vk::ImageCreateInfo& createInfo,
+		vk::MemoryPropertyFlags properties) const
+{
+	vk::raii::Image image(m_device, createInfo);
+
+	const auto memRequirements = image.getMemoryRequirements();
+	const uint32_t memType = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	// We check BEFORE allocation to warn about what is about to happen
+	if (TrackedDeviceMemory::allocationCount >= ALLOCATION_WARNING_THRESHOLD)
+	{
+		std::cerr << DBG_COLOR_YELLOW 
+			<< "[WARNING] High memory allocation count: " 
+			<< TrackedDeviceMemory::allocationCount
+			<< " (Limit ~4096)" << DBG_COLOR_RESET << std::endl;
+	}
+
+	const vk::MemoryAllocateInfo allocInfo{
+		.allocationSize = memRequirements.size,
+		.memoryTypeIndex = memType
+	};
+	vk::raii::DeviceMemory memory(m_device, allocInfo);
+
+	image.bindMemory(*memory, 0);
+
+	return { std::move(image), TrackedDeviceMemory(std::move(memory)) };
+}
+
+vk::Format VulkanDevice::findSupportedFormat(
+		const std::vector<vk::Format>& candidates,
+		vk::ImageTiling tiling,
+		vk::FormatFeatureFlags features) const
+{
+	for (const vk::Format& format : candidates)
+	{
+		const vk::FormatProperties props = m_physicalDevice.getFormatProperties(format);
+
+		if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features)
+			return format;
+		else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features)
+			return format;
+	}
+	throw std::runtime_error("failed to find supported format!");
+}

@@ -9,7 +9,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	m_window(window),
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
-	m_pipeline(device, m_swapchain)
+	m_pipeline(nullptr)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -21,7 +21,55 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	// We need one per swapchain image to satisfy validation layers
 	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
 	remakeRenderFinishedSemaphores();
+
+	// Find Depth Format
+	m_depthFormat = m_device.findSupportedFormat(
+			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+			vk::ImageTiling::eOptimal,
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment
+	);
+	
+	// Create Depth Buffer
+	createDepthBuffer();
+
+	// Now create Pipeline (passing the format)
+	m_pipeline = VulkanPipeline(device, m_swapchain, m_depthFormat);
+
 	LOG_DEBUG("Renderer initialized");
+}
+
+void Renderer::createDepthBuffer()
+{
+	const auto extent = m_swapchain.getExtent();
+
+	const vk::ImageCreateInfo imageInfo {
+		.imageType = vk::ImageType::e2D,
+		.format = m_depthFormat,
+		.extent = { extent.width, extent.height, 1 },
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.samples = vk::SampleCountFlagBits::e1,
+		.tiling = vk::ImageTiling::eOptimal,
+		.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+		.sharingMode = vk::SharingMode::eExclusive,
+		.initialLayout = vk::ImageLayout::eUndefined
+	};
+
+	auto [img, mem] = m_device.createImage(imageInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	m_depthImage = std::move(img);
+	m_depthMemory = std::move(mem);
+
+	const vk::ImageViewCreateInfo viewInfo {
+		.image = *m_depthImage,
+		.viewType = vk::ImageViewType::e2D,
+		.format = m_depthFormat,
+		.subresourceRange = {
+		.aspectMask = vk::ImageAspectFlagBits::eDepth,
+		.baseMipLevel = 0, .levelCount = 1,
+		.baseArrayLayer = 0, .layerCount = 1
+		}
+	};
+	m_depthView = vk::raii::ImageView(m_device.device(), viewInfo);
 }
 
 void Renderer::remakeRenderFinishedSemaphores()
@@ -42,6 +90,7 @@ Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
 void Renderer::recreateSwapchain()
 {
 	m_swapchain.recreate();
+	createDepthBuffer();
 	remakeRenderFinishedSemaphores();
 }
 
@@ -145,8 +194,21 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	cmd.reset();
 	cmd.begin({ .flags = {} });
 
+	// --- DEPTH BARRIER (Undefined -> DepthAttachment) ---
+	const vk::ImageMemoryBarrier2 depthBarrier {
+		.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+		.srcAccessMask = vk::AccessFlagBits2::eNone,
+		.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+		.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+		.oldLayout = vk::ImageLayout::eUndefined,
+		.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+		.image = *m_depthImage,
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
+			.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
+	};
+
 	// Barrier: Undefined -> Color Attachment
-	const vk::ImageMemoryBarrier2 preRenderBarrier {
+	const vk::ImageMemoryBarrier2 colorBarrier {
 		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
 		.srcAccessMask = vk::AccessFlagBits2::eNone,
 		.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -159,19 +221,39 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
 			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 	};
-	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &preRenderBarrier });
+	
+	// Combine the barriers
+	const vk::ImageMemoryBarrier2 barriers[] = { colorBarrier, depthBarrier };
+	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
 
-	// Rendering
+	// --- ATTACHMENTS ---
+	// Color Attachment
 	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
-	const vk::RenderingAttachmentInfo attachment {
+	const vk::RenderingAttachmentInfo colorAttachment {
 		.imageView = swapchainImageView,
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.loadOp = vk::AttachmentLoadOp::eClear,
 		.storeOp = vk::AttachmentStoreOp::eStore,
 		.clearValue = clearColor
 	};
+	// Depth Attachment (New)
+	const vk::RenderingAttachmentInfo depthAttachment {
+		.imageView = *m_depthView,
+		.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+		.loadOp = vk::AttachmentLoadOp::eClear,
+		.storeOp = vk::AttachmentStoreOp::eStore,
+		.clearValue = vk::ClearValue{ .depthStencil = { 1.0f, 0 } } // Clear to 1.0 (Far)
+	};
 	
-	cmd.beginRendering({ .renderArea = { .extent = extent }, .layerCount = 1, .colorAttachmentCount = 1, .pColorAttachments = &attachment });
+	const vk::RenderingInfo renderInfo {
+		.renderArea = { .extent = extent },
+		.layerCount = 1,
+		.colorAttachmentCount = 1,
+		.pColorAttachments = &colorAttachment,
+		.pDepthAttachment = &depthAttachment
+	};
+
+	cmd.beginRendering(renderInfo);
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline.getPipeline());
 	
@@ -185,7 +267,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	constants.view = viewMatrix;
 
 	// Calculate Projection based on current window aspect ratio
-	float aspect = (float)extent.width / (float)extent.height;
+	const float aspect = (float)extent.width / (float)extent.height;
 	constants.proj = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
 	constants.proj[1][1] *= -1; // Fix Vulkan Y-flip
 
