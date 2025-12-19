@@ -16,7 +16,6 @@ public:
 	inline const vk::raii::SwapchainKHR& getSwapchain() const { return m_swapchain; }
 	inline vk::Format getImageFormat() const { return m_imageFormat; }
 	inline vk::Extent2D getExtent() const { return m_extent; }
-	inline std::array<float, 2> getScale() const { return m_scale; }
 	inline const std::vector<vk::raii::ImageView>& getImageViews() const { return m_imageViews; }
 	inline const std::vector<vk::Image>& getImages() const { return m_images; }
 private:
@@ -32,8 +31,6 @@ private:
 
 	vk::Format m_imageFormat;
 	vk::Extent2D m_extent;
-
-	std::array<float, 2> m_scale = {1.0f, 1.0f};
 
 	// Internal helpers
 	void createSwapchain();

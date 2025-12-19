@@ -182,14 +182,7 @@ void VulkanSwapchain::createSwapchain()
 	// 7. Store attributes
 	m_imageFormat = surfaceFormat.format;
 	m_extent = extent;
-	if (m_extent.height > 0 && m_extent.width > 0)
-	{
-		const float min = static_cast<float>( std::min(m_extent.width, m_extent.height) );
-		m_scale[0] = min / static_cast<float>(m_extent.width);
-		m_scale[1] = min / static_cast<float>(m_extent.height);
-	}
-	else
-		{ m_scale[0] = 1.0f; m_scale[1] = 1.0f; }
+
 	// 8. Get Images (Raw handles, not RAII)
 	m_images = m_swapchain.getImages();
     
