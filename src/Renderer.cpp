@@ -9,7 +9,14 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	m_window(window),
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
-	m_pipeline(nullptr)
+	// Find Depth Format
+	m_depthFormat(
+		device.findSupportedFormat(
+			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+			vk::ImageTiling::eOptimal,
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
+		),
+	m_pipeline(device, m_swapchain, m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -21,19 +28,9 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	// We need one per swapchain image to satisfy validation layers
 	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
 	remakeRenderFinishedSemaphores();
-
-	// Find Depth Format
-	m_depthFormat = m_device.findSupportedFormat(
-			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
-			vk::ImageTiling::eOptimal,
-			vk::FormatFeatureFlagBits::eDepthStencilAttachment
-	);
 	
 	// Create Depth Buffer
 	createDepthBuffer();
-
-	// Now create Pipeline (passing the format)
-	m_pipeline = VulkanPipeline(device, m_swapchain, m_depthFormat);
 
 	LOG_DEBUG("Renderer initialized");
 }

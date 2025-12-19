@@ -50,6 +50,13 @@ private:
 	// Owned Resources
 	VulkanCommand   m_command;
 	VulkanSwapchain m_swapchain;
+
+	// Depth Resources
+	vk::raii::Image     m_depthImage = nullptr;
+	TrackedDeviceMemory m_depthMemory;
+	vk::raii::ImageView m_depthView = nullptr;
+	vk::Format          m_depthFormat;
+		
 	VulkanPipeline  m_pipeline;
 
 	// Sync
@@ -64,12 +71,6 @@ private:
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
 	static constexpr std::array<float, 4> backgroundColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	// Depth Resources
-	vk::raii::Image     m_depthImage = nullptr;
-	TrackedDeviceMemory m_depthMemory;
-	vk::raii::ImageView m_depthView = nullptr;
-	vk::Format          m_depthFormat;
 
 	void createDepthBuffer();
 };
