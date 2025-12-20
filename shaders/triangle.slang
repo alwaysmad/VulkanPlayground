@@ -34,6 +34,7 @@ VSOutput vertMain(VSInput input)
 
 	// Position Logic:
 	output.sv_position = mul(pc.viewProj, float4(input.posVar1.xyz, 1.0));
+
 	// Color Logic:
 	output.color = input.paramsVar2.rgb;
 
@@ -44,4 +45,5 @@ VSOutput vertMain(VSInput input)
 float4 fragMain(VSOutput inVert) : SV_Target
 {
 	return float4(inVert.color, 1.0);
+	//return float4(inVert.color * clamp( -1.5/(-3.3 + 0.1/ (1 - inVert.sv_position.z)) , 0.01, 1.0), 1.0);
 }

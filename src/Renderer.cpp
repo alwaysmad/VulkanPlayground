@@ -6,7 +6,6 @@
 
 Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	m_device(device), 
-	m_window(window),
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
 	// Find Depth Format
@@ -154,8 +153,8 @@ void Renderer::updateProjectionMatrix()
 void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore, const glm::mat4& viewMatrix)
 {
 	// 0. Check for Minimization
-	const auto extent = m_window.getExtent();
-	if (extent.width == 0 || extent.height == 0)
+	const auto extent = m_swapchain.getExtent();
+	if (extent.width <= 1 || extent.height <= 1)
 		{ submitDummy(fence, waitSemaphore); return; }
 
 	// 1. Acquire Image
@@ -231,14 +230,9 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	cmd.reset();
 	cmd.begin({ .flags = {} });
 
-	// --- DEPTH BARRIER (Undefined -> DepthAttachment) ---
-	const vk::ImageMemoryBarrier2 depthBarrier ;
-
-	// Barrier: Undefined -> Color Attachment
-	const vk::ImageMemoryBarrier2 colorBarrier ;
-	
 	// Combine the barriers
 	const vk::ImageMemoryBarrier2 barriers[] = { 
+		// Barrier: Undefined -> Color Attachment
 		{
 			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
 			.srcAccessMask = vk::AccessFlagBits2::eNone,
@@ -252,6 +246,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
 				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 		},
+		// DEPTH BARRIER (Undefined -> DepthAttachment)
 		{
 			.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
 			.srcAccessMask = vk::AccessFlagBits2::eNone,

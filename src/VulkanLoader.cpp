@@ -57,14 +57,15 @@ void VulkanLoader::uploadMesh(Mesh& mesh)
 	mesh.vertexBuffer = std::move(vBuf);
 	mesh.vertexMemory = std::move(vMem);
 
-	if (!mesh.indices.empty()) {
-		auto [iBuf, iMem] = uploadToDevice(
-			mesh.indices.data(), 
-			sizeof(uint32_t) * mesh.indices.size(), 
-			vk::BufferUsageFlagBits::eIndexBuffer
-		);
-		mesh.indexBuffer = std::move(iBuf);
-		mesh.indexMemory = std::move(iMem);
-	}
+	if (mesh.indices.empty()) 
+		{ throw std::runtime_error("Trying to upload mesh with empty indices"); }
+	auto [iBuf, iMem] = uploadToDevice(
+		mesh.indices.data(), 
+		sizeof(uint32_t) * mesh.indices.size(), 
+		vk::BufferUsageFlagBits::eIndexBuffer
+	);
+	mesh.indexBuffer = std::move(iBuf);
+	mesh.indexMemory = std::move(iMem);
+
 	LOG_DEBUG("Mesh uploaded via Transfer Queue");
 }

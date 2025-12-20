@@ -48,7 +48,6 @@ private:
 	void updateProjectionMatrix();
 
 	const VulkanDevice& m_device;
-	const VulkanWindow& m_window;
 
 	// Owned Resources
 	VulkanCommand   m_command;
@@ -69,7 +68,7 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix = defaultView);
+	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix);
 	void recreateSwapchain();
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
