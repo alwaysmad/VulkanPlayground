@@ -44,6 +44,9 @@ private:
 		0.0f,       0.0f,      -3.354102f,  1.0f  // Col 3 (Translation)
 	};
 
+	glm::mat4 m_proj; 
+	void updateProjectionMatrix();
+
 	const VulkanDevice& m_device;
 	const VulkanWindow& m_window;
 

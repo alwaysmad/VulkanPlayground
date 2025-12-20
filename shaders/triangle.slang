@@ -1,8 +1,7 @@
 // 1. Push Constants (Updated)
 struct PushConstants
 {
-	float4x4 view;
-	float4x4 proj;
+	float4x4 viewProj;
 };
 
 [[vk::push_constant]]
@@ -34,7 +33,7 @@ VSOutput vertMain(VSInput input)
 	VSOutput output;
 
 	// Position Logic:
-	output.sv_position = mul(pc.proj, mul(pc.view, float4(input.posVar1.xyz, 1.0)));
+	output.sv_position = mul(pc.viewProj, float4(input.posVar1.xyz, 1.0));
 	// Color Logic:
 	output.color = input.paramsVar2.rgb;
 

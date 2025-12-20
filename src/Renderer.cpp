@@ -16,6 +16,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 			vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
+	// Create pipeline with that depth format
 	m_pipeline(device, m_swapchain, m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
@@ -32,6 +33,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	// Create Depth Buffer
 	createDepthBuffer();
 
+	updateProjectionMatrix();
 	LOG_DEBUG("Renderer initialized");
 }
 
@@ -87,8 +89,9 @@ Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
 void Renderer::recreateSwapchain()
 {
 	m_swapchain.recreate();
-	createDepthBuffer();
 	remakeRenderFinishedSemaphores();
+	createDepthBuffer();
+	updateProjectionMatrix();
 }
 
 void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
@@ -109,6 +112,43 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 	
 	// Must signal 'fence' so the CPU knows this "frame" is done
 	m_device.graphicsQueue().submit(submitInfo, fence);
+}
+
+void Renderer::updateProjectionMatrix()
+{
+	const auto extent = m_swapchain.getExtent();
+	const auto aspect = (float)extent.width / (float)extent.height;
+
+	// MANUAL PROJECTION MATRIX CONSTRUCTION
+	// FOV: 45 degrees
+	// Near: 0.1f
+	// Far: Infinity
+	// Z-Range: [0, 1] (Standard Vulkan)
+	
+	// f = 1.0 / tan(fov / 2)
+	// For 45 deg, tan(22.5) approx 0.4142 -> f approx 2.4142
+	constexpr float f = 2.41421356f;
+	constexpr float near = 0.1f;
+
+	m_proj = glm::mat4(0.0f);
+
+	// [0][0] Scale X
+	m_proj[0][0] = f / aspect;
+
+	// [1][1] Scale Y (Negative for Vulkan Y-Flip)
+	m_proj[1][1] = -f;
+
+	// [2][2] Z-Coeff (Standard Z: 0 at Near, 1 at Far)
+	// Formula: z_ndc = -1 + (near / z_view)
+	// Since w_clip = -z_view, this requires A = -1.
+	m_proj[2][2] = -1.0f; 
+
+	// [3][2] Translation Z (The 'B' term)
+	// B = -near
+	m_proj[3][2] = -near;
+
+	// [2][3] Perspective Division (Sets w_clip = -z_view)
+	m_proj[2][3] = -1.0f;
 }
 
 void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore, const glm::mat4& viewMatrix)
@@ -192,35 +232,38 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	cmd.begin({ .flags = {} });
 
 	// --- DEPTH BARRIER (Undefined -> DepthAttachment) ---
-	const vk::ImageMemoryBarrier2 depthBarrier {
-		.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-		.srcAccessMask = vk::AccessFlagBits2::eNone,
-		.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-		.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-		.oldLayout = vk::ImageLayout::eUndefined,
-		.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-		.image = *m_depthImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
-			.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
-	};
+	const vk::ImageMemoryBarrier2 depthBarrier ;
 
 	// Barrier: Undefined -> Color Attachment
-	const vk::ImageMemoryBarrier2 colorBarrier {
-		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-		.srcAccessMask = vk::AccessFlagBits2::eNone,
-		.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-		.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
-		.oldLayout = vk::ImageLayout::eUndefined,
-		.newLayout = vk::ImageLayout::eColorAttachmentOptimal,
-		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
-			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
-	};
+	const vk::ImageMemoryBarrier2 colorBarrier ;
 	
 	// Combine the barriers
-	const vk::ImageMemoryBarrier2 barriers[] = { colorBarrier, depthBarrier };
+	const vk::ImageMemoryBarrier2 barriers[] = { 
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.srcAccessMask = vk::AccessFlagBits2::eNone,
+			.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+			.oldLayout = vk::ImageLayout::eUndefined,
+			.newLayout = vk::ImageLayout::eColorAttachmentOptimal,
+			.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+			.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+			.image = swapchainImage,
+			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+		},
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+			.srcAccessMask = vk::AccessFlagBits2::eNone,
+			.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+			.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+			.oldLayout = vk::ImageLayout::eUndefined,
+			.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+			.image = *m_depthImage,
+			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
+		}
+	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
 
 	// --- ATTACHMENTS ---
@@ -233,7 +276,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 		.storeOp = vk::AttachmentStoreOp::eStore,
 		.clearValue = clearColor
 	};
-	// Depth Attachment (New)
+	// Depth Attachment
 	const vk::RenderingAttachmentInfo depthAttachment {
 		.imageView = *m_depthView,
 		.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
@@ -261,12 +304,9 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 
 	// --- Push camera and projection matrices ---
 	CameraPushConstants constants;
-	constants.view = viewMatrix;
 
 	// Calculate Projection based on current window aspect ratio
-	const float aspect = (float)extent.width / (float)extent.height;
-	constants.proj = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
-	constants.proj[1][1] *= -1; // Fix Vulkan Y-flip
+	constants.viewProj = m_proj * viewMatrix;
 
 	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
 	// -------------------------

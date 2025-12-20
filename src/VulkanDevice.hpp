@@ -22,10 +22,20 @@ public:
 	TrackedDeviceMemory(TrackedDeviceMemory&& other) noexcept 
 		: m_memory(std::move(other.m_memory)) {}
 
-	TrackedDeviceMemory& operator= (TrackedDeviceMemory&& other) noexcept {
+	// --- FIXED ASSIGNMENT OPERATOR ---
+	TrackedDeviceMemory& operator= (TrackedDeviceMemory&& other) noexcept
+	{
 		if (this != &other)
 		{
-			if (*m_memory) { allocationCount--; }
+			// 1. Check if we are currently holding valid memory
+			if (*m_memory) 
+			{ 
+				allocationCount--; 
+				// Explicitly release the resource to nullptr.
+				// This prevents the old handle from being swapped into 'other'.
+				m_memory = nullptr; 
+			}
+			// 2. Now safe to move (other.m_memory moves into a null slot)
 			m_memory = std::move(other.m_memory);
 		}
 		return *this;
