@@ -7,30 +7,27 @@ constexpr auto DeviceName = "Intel(R) Iris(R) Xe Graphics (ADL GT2)";
 static constexpr uint32_t WIDTH  = 800;
 static constexpr uint32_t HEIGHT = 600;
 
-int main(/* int argc, char** argv*/ )
+int main(int argc, char** argv)
 {
-	/*try
+	try
 	{
-		std::string DeviceName;
+		std::string deviceName;
 
 		// Check if user provided a device name via CLI
 		if (argc > 1)
 		{
-			DeviceName = argv[1];
-			LOG_DEBUG("User requested device: " << DeviceName);
+			deviceName = argv[1];
+			LOG_DEBUG("User requested device: " << deviceName);
 		}
+		// Pick hardcoded device (for now)
 		else
-			{ throw std::runtime_error("Wrong CLI argumnets -- device name expected."); }
-
-		// Pass it to the application
-		return VulkanApplication(AppName, DeviceName).run();
-	}*/
-	try
-	{
+		{
+			deviceName = DeviceName;
+		}
 		// Create an VulkanApplication instance 
 		// execute run() method 
 		// then destroy the instance as it's an anonymous object
-		return VulkanApplication(AppName, DeviceName, WIDTH, HEIGHT).run();
+		return VulkanApplication(AppName, deviceName, WIDTH, HEIGHT).run();
 	}
 	// The exception type for vulkan_raii.hpp is vk::SystemError
 	catch ( const vk::SystemError& e )

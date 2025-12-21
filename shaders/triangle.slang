@@ -1,4 +1,4 @@
-// 1. Push Constants (Updated)
+// 1. Push Constants
 struct PushConstants
 {
 	float4x4 viewProj;
