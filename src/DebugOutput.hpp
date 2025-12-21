@@ -9,7 +9,6 @@ constexpr auto DBG_STYLE_UNDERLINE = "\033[4m";
 constexpr auto DBG_COLOR_RESET     = "\033[0m";
 
 #ifdef ENABLE_DEBUG_LOGGING
-	#include <iostream> 
 	#define LOG_DEBUG(...) do { \
 		std::cout \
 			<< DBG_COLOR_WHITE \

@@ -10,22 +10,21 @@ public:
 		{ return currentFrame ^ 1u; }
 
 	VulkanCommand(const VulkanDevice& device, uint32_t queueFamilyIndex)
-		: m_device(device),
-		  m_commandPool(
-			  device.device(),
-			  vk::CommandPoolCreateInfo{
-				  .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-				  .queueFamilyIndex = queueFamilyIndex
-			  }
-		  ),
-		  m_commandBuffers(
-			  device.device(),
-			  vk::CommandBufferAllocateInfo{
-				  .commandPool = m_commandPool,
-				  .level = vk::CommandBufferLevel::ePrimary,
-				  .commandBufferCount = MAX_FRAMES_IN_FLIGHT
-			  }
-		  )
+		: m_commandPool(
+			device.device(),
+			vk::CommandPoolCreateInfo{
+				.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+				.queueFamilyIndex = queueFamilyIndex
+			}
+		),
+		m_commandBuffers(
+			device.device(),
+			vk::CommandBufferAllocateInfo{
+				.commandPool = m_commandPool,
+				.level = vk::CommandBufferLevel::ePrimary,
+				.commandBufferCount = MAX_FRAMES_IN_FLIGHT
+			}
+		)
 		{ LOG_DEBUG("VulkanCommand created for Queue Family " << queueFamilyIndex); }
 
 	~VulkanCommand() { LOG_DEBUG("VulkanCommand resources destroyed"); }
@@ -34,7 +33,6 @@ public:
 	const vk::raii::CommandPool& getPool() const { return m_commandPool; }
 
 private:
-	const VulkanDevice& m_device;
 	vk::raii::CommandPool m_commandPool;
 	vk::raii::CommandBuffers m_commandBuffers;
 };

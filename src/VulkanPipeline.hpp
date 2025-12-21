@@ -1,12 +1,11 @@
 #pragma once
 
 class VulkanDevice;
-class VulkanSwapchain;
 
 class VulkanPipeline
 {
 public:
-	VulkanPipeline(const VulkanDevice&, const VulkanSwapchain&, vk::Format depthFormat);
+	VulkanPipeline(const VulkanDevice&, vk::Format colorFormat, vk::Format depthFormat);
 
 	~VulkanPipeline();
 

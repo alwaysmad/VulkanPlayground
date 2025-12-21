@@ -8,7 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	glfwContext(),
 	vulkanInstance(appName, glfwContext.getRequiredInstanceExtensions()),
 	vulkanWindow(vulkanInstance, w, h, appName),
-	vulkanDevice(vulkanInstance, vulkanWindow, DeviceName),
+	vulkanDevice(vulkanInstance, vulkanWindow.getSurface(), DeviceName),
 	vulkanLoader(vulkanDevice),
 	renderer(vulkanDevice, vulkanWindow)
 {

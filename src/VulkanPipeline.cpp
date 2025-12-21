@@ -1,6 +1,5 @@
 #include "VulkanPipeline.hpp"
 #include "VulkanDevice.hpp"
-#include "VulkanSwapchain.hpp"
 #include "Vertex.hpp"
 #include "Uniforms.hpp"
 
@@ -20,7 +19,7 @@ static constexpr auto  pushConstantSize = sizeof(CameraPushConstants);
 	return vk::raii::ShaderModule(device, createInfo);
 } 
 
-VulkanPipeline::VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain& swapchain, vk::Format depthFormat) :
+VulkanPipeline::VulkanPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat) :
 	m_device(device),
 	m_pipelineLayout(nullptr),
 	m_pipeline(nullptr)
@@ -111,7 +110,7 @@ VulkanPipeline::VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain
 		.pPushConstantRanges = &pushConstantRange
 	};
 	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
-	// (New). Depth Stencil State (NEW)
+	// (New). Depth Stencil State
 	constexpr vk::PipelineDepthStencilStateCreateInfo depthStencil {
 		.depthTestEnable = vk::True,
 		.depthWriteEnable = vk::True,
@@ -120,7 +119,6 @@ VulkanPipeline::VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain
 		.stencilTestEnable = vk::False
 	};
 	// 11. Dynamic Rendering Info (Vulkan 1.3)
-	const vk::Format colorFormat = swapchain.getImageFormat();
 
 	const vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
 		.colorAttachmentCount = 1,
@@ -137,7 +135,7 @@ VulkanPipeline::VulkanPipeline(const VulkanDevice& device, const VulkanSwapchain
 		.pViewportState = &viewportState, // 5
 		.pRasterizationState = &rasterizer, // 6
 		.pMultisampleState = &multisampling, // 7
-		.pDepthStencilState = &depthStencil, // New
+		.pDepthStencilState = &depthStencil, // (New)
 		.pColorBlendState = &colorBlending, // 8
 		.pDynamicState = &dynamicStateInfo, // 9
 		.layout = m_pipelineLayout, // 10

@@ -1,6 +1,5 @@
 // src/VulkanDevice.cpp
 #include "VulkanInstance.hpp"
-#include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
 
 static constexpr std::array requiredDeviceExtensions = { 
@@ -13,7 +12,7 @@ static constexpr std::array requiredDeviceExtensions = {
 static constexpr float queuePriority = 1.0f;
 static constexpr uint32_t ALLOCATION_WARNING_THRESHOLD = 4000;
 
-VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& window, const std::string& deviceName) :
+VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::SurfaceKHR& surface, const std::string& deviceName) :
 	m_physicalDevice(nullptr),
 	m_device(nullptr),
 	m_graphicsQueue(nullptr),
@@ -139,7 +138,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 			else flags += "-";
 			if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer) flags += "T";
 			else flags += "-";
-			if (m_physicalDevice.getSurfaceSupportKHR(i, *window.getSurface())) flags += "P";
+			if (m_physicalDevice.getSurfaceSupportKHR(i, *surface)) flags += "P";
 			else flags += "-";
 			// There is more, but we don't need them
 			LOG_DEBUG("\t" << i << " : " << flags);
@@ -150,7 +149,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 	{
 		const bool supportsGraphics = !!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
-		const bool supportsPresent  = m_physicalDevice.getSurfaceSupportKHR(i, *window.getSurface());
+		const bool supportsPresent  = m_physicalDevice.getSurfaceSupportKHR(i, *surface);
 		
 		if (supportsGraphics && supportsPresent)
 		{
@@ -173,7 +172,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const VulkanWindow& w
 	{
 		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{
-			if (m_physicalDevice.getSurfaceSupportKHR(i, *window.getSurface()))
+			if (m_physicalDevice.getSurfaceSupportKHR(i, *surface))
 				{ presentQueueIndex = i; break; }
 		}
 	}
@@ -293,7 +292,7 @@ uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFla
 		// 2. Check if the memory type has ALL the requested properties
 		if ( (typeFilter & (1 << i)) &&
 				(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-			{ return i;}
+			{ return i; }
 	}
 	throw std::runtime_error("failed to find suitable memory type for buffer");
 }

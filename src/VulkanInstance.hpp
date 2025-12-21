@@ -7,7 +7,6 @@ public:
 	~VulkanInstance();
 	
 	inline const vk::raii::Instance& getInstance() const { return instance; }
-	inline const vk::raii::Context& getContext() const { return context; }
 private:
 	vk::raii::Context context;
 	vk::raii::Instance instance;

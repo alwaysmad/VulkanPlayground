@@ -16,7 +16,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
 	// Create pipeline with that depth format
-	m_pipeline(device, m_swapchain, m_depthFormat)
+	m_pipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -298,11 +298,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	cmd.setScissor(0, scissor);
 
 	// --- Push camera and projection matrices ---
-	CameraPushConstants constants;
-
-	// Calculate Projection based on current window aspect ratio
-	constants.viewProj = m_proj * viewMatrix;
-
+	const CameraPushConstants constants { .viewProj = m_proj * viewMatrix };
 	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
 	// -------------------------
 

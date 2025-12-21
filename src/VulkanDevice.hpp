@@ -64,12 +64,11 @@ private:
 
 // --- VulkanDevice ---
 class VulkanInstance;
-class VulkanWindow;
 
 class VulkanDevice
 {
 public:
-	VulkanDevice(const VulkanInstance&, const VulkanWindow&, const std::string&);
+	VulkanDevice(const VulkanInstance&, const vk::raii::SurfaceKHR&, const std::string&);
 
 	inline const vk::raii::PhysicalDevice& physicalDevice() const { return m_physicalDevice; }
 	inline const vk::raii::Device& device() const { return m_device; }
