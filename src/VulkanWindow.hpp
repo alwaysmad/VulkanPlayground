@@ -9,12 +9,11 @@ public:
 		window(nullptr), surface(nullptr), m_lastTime(0.0), m_nbFrames(0)
 	{
 		window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
-		if (!window)
-		throw std::runtime_error("Failed to create GLFW window");
+		if (!window) { throw std::runtime_error("Failed to create GLFW window"); }
 
 		VkSurfaceKHR _surface;
 		if (glfwCreateWindowSurface(*instance.getInstance(), window, nullptr, &_surface) != VK_SUCCESS)
-		throw std::runtime_error("Failed to create window surface");
+			{ throw std::runtime_error("Failed to create window surface"); }
 
 		surface = vk::raii::SurfaceKHR(instance.getInstance(), _surface);
 
@@ -26,7 +25,7 @@ public:
 	
 	~VulkanWindow()
 	{
-		if (window) glfwDestroyWindow(window);
+		if (window) { glfwDestroyWindow(window); }
 		LOG_DEBUG("Window and Surface destroyed");
 	}
 

@@ -34,15 +34,15 @@ void VulkanApplication::fillMesh()
 	// Position (x,y,z,w) | Color (r,g,b,a)
 	m_mesh.vertices = {
 		// Front Face (Z = -0.5)
-		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 0: Red
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 1: Green
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 2: Blue
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 3: Yellow
+		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
 		// Back Face (Z = +0.5)
-		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f}), // 4: Cyan
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: Magenta
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: White
-		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f})  // 7: Black
+		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: white
+		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f})  // 7: cyan
 	};
 
 	m_mesh.indices = {
