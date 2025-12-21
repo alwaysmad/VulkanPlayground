@@ -12,7 +12,7 @@ static constexpr std::array requiredDeviceExtensions = {
 static constexpr float queuePriority = 1.0f;
 static constexpr uint32_t ALLOCATION_WARNING_THRESHOLD = 4000;
 
-VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::SurfaceKHR& surface, const std::string& deviceName) :
+VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::SurfaceKHR* surface, const std::string& deviceName) :
 	m_physicalDevice(nullptr),
 	m_device(nullptr),
 	m_graphicsQueue(nullptr),
@@ -44,12 +44,13 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	// In debug build
 	if constexpr (enableValidationLayers)
 	{
-		// If prefered device not found just grab the first one
+		// If prefered device not found tell user
 		if (*m_physicalDevice == nullptr)
 		{
 			m_physicalDevice = devices.front();
 			LOG_DEBUG("Could not find requested device: '" << deviceName << "'");
 		}
+		// and just grab the first one
 		LOG_DEBUG("Selected device: '" << m_physicalDevice.getProperties().deviceName << "'");
 	}
 	// In release build
@@ -138,45 +139,47 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 			else flags += "-";
 			if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer) flags += "T";
 			else flags += "-";
-			if (m_physicalDevice.getSurfaceSupportKHR(i, *surface)) flags += "P";
+			if (surface && m_physicalDevice.getSurfaceSupportKHR(i, **surface)) flags += "P";
 			else flags += "-";
 			// There is more, but we don't need them
 			LOG_DEBUG("\t" << i << " : " << flags);
 		}
 	}
 
-	// 1. Try to find a queue family that supports BOTH Graphics and Present
-	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+	if (surface)
 	{
-		const bool supportsGraphics = !!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
-		const bool supportsPresent  = m_physicalDevice.getSurfaceSupportKHR(i, *surface);
-		
-		if (supportsGraphics && supportsPresent)
-		{
-			graphicsQueueIndex = i;
-			presentQueueIndex = i;
-			break;
-		}
-	}
-
-	// 2. If we didn't find a unified one, fallback to separate queues
-	if (graphicsQueueIndex == UINT32_MAX)
-	{
+		// 1. Try to find a queue family that supports BOTH Graphics and Present
 		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
 		{
-			if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
-				{ graphicsQueueIndex = i; break; }
+			const bool supportsGraphics = !!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics);
+			const bool supportsPresent  = m_physicalDevice.getSurfaceSupportKHR(i, **surface);
+			
+			if (supportsGraphics && supportsPresent)
+			{
+				graphicsQueueIndex = i;
+				presentQueueIndex = i;
+				break;
+			}
 		}
-	}
-	if (presentQueueIndex == UINT32_MAX)
-	{
-		for (uint32_t i = 0; i < queueFamilies.size(); ++i)
-		{
-			if (m_physicalDevice.getSurfaceSupportKHR(i, *surface))
-				{ presentQueueIndex = i; break; }
-		}
-	}
 
+		// 2. If we didn't find a unified one, fallback to separate queues
+		if (graphicsQueueIndex == UINT32_MAX)
+		{
+			for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+			{
+				if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)
+					{ graphicsQueueIndex = i; break; }
+			}
+		}
+		if (presentQueueIndex == UINT32_MAX)
+		{
+			for (uint32_t i = 0; i < queueFamilies.size(); ++i)
+			{
+				if (m_physicalDevice.getSurfaceSupportKHR(i, *surface))
+					{ presentQueueIndex = i; break; }
+			}
+		}
+	}
 	// 3. Find Compute (Dedicated if possible, or reuse graphics)
 	// Some vendors have a dedicated compute queue (Async Compute) which is faster.
 	for (uint32_t i = 0; i < queueFamilies.size(); ++i)
@@ -204,11 +207,14 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	// Fallback: Use Graphics queue
 	if (transferQueueIndex == UINT32_MAX)
 		transferQueueIndex = graphicsQueueIndex;
-
-	if (graphicsQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find graphics queue family"); }
-	else { LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
-	if (presentQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find queue family that can present to surface"); }
-	else { LOG_DEBUG("Selected " << presentQueueIndex << " as present queue family"); }
+	
+	if (surface)
+	{
+		if (graphicsQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find graphics queue family"); }
+		else { LOG_DEBUG("Selected " << graphicsQueueIndex << " as graphics queue family"); }
+		if (presentQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find queue family that can present to surface"); }
+		else { LOG_DEBUG("Selected " << presentQueueIndex << " as present queue family"); }
+	}
 	if (computeQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find compute queue family"); }
 	else { LOG_DEBUG("Selected " << computeQueueIndex << " as compute queue family"); }
 	if (transferQueueIndex == UINT32_MAX) { throw std::runtime_error("Failed to find transfer queue family"); }
@@ -218,7 +224,11 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	// Prepare Queue Creation Info
 	////////////////////////////////////////////////////////////////////////////////
 	// We use a set to ensure we only create ONE queue info per unique family.
-	const std::set<uint32_t> uniqueQueueFamilies = { graphicsQueueIndex, presentQueueIndex, computeQueueIndex, transferQueueIndex};
+	const std::set<uint32_t> uniqueQueueFamilies = {
+		(surface ? graphicsQueueIndex: computeQueueIndex),
+		(surface ? presentQueueIndex : computeQueueIndex),
+		computeQueueIndex,
+		transferQueueIndex};
 
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
@@ -274,8 +284,11 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	////////////////////////////////////////////////////////////////////////////////
 	// We request index 0 for both.
 	// If they are the same family, we are sharing the same actual queue, which is fine.
-	m_graphicsQueue = m_device.getQueue(graphicsQueueIndex, 0);
-	m_presentQueue = m_device.getQueue(presentQueueIndex, 0);
+	if (surface)
+	{
+		m_graphicsQueue = m_device.getQueue(graphicsQueueIndex, 0);
+		m_presentQueue = m_device.getQueue(presentQueueIndex, 0);
+	}
 	m_computeQueue = m_device.getQueue(computeQueueIndex, 0);
 	m_transferQueue = m_device.getQueue(transferQueueIndex, 0);
 
