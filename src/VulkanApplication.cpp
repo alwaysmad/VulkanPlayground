@@ -71,15 +71,15 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
-		// --- Calculate Camera View ---
-		auto time = vulkanWindow.getTime();
+		// --- 
+		const auto time = vulkanWindow.getTime();
 		
 		const glm::mat4 model = {
-			cos(time), -sin(time), 0.0f, 0.0f,
-			sin(time),  cos(time), 0.0f, 0.0f,
-			0.0f, 	    0.0f,      1.0f, 0.0f,
-			0.0f,       0.0f,      0.0f, 1.0f };
-		// -----------------------------
+			cos(time),  0.0f,      sin(time),  0.0f,
+			0.0f,       1.0f,      0.0f,       0.0f,
+			-sin(time), 0.0f,      cos(time),  0.0f,
+			0.0f,       0.0f,      0.0f,       1.0f };
+		// ---
 
 		auto& fence = m_inFlightFences[currentFrame];
 		

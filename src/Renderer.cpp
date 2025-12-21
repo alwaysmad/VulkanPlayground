@@ -155,8 +155,8 @@ void Renderer::draw(
 		uint32_t currentFrame,
 		vk::Fence fence,
 		vk::Semaphore waitSemaphore,
-		const glm::mat4& modelMatrix = defaultModel,
-		const glm::mat4& viewMatrix = defaultView )
+		const glm::mat4& modelMatrix,
+		const glm::mat4& viewMatrix )
 {
 	// 0. Check for Minimization
 	const auto extent = m_swapchain.getExtent();
@@ -227,7 +227,12 @@ void Renderer::draw(
 		{ recreateSwapchain(); }
 }
 
-void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& modelMatrix, const glm::mat4& viewMatrix)
+void Renderer::recordCommands(
+		const vk::raii::CommandBuffer& cmd,
+		uint32_t imageIndex,
+		const Mesh& mesh,
+		const glm::mat4& modelMatrix,
+		const glm::mat4& viewMatrix )
 {
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
