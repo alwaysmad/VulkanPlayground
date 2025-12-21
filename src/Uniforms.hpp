@@ -2,5 +2,6 @@
 
 struct CameraPushConstants
 {
-	glm::mat4 viewProj; // Combined 64 bytes
+	glm::mat4 viewProj; // 0...63
+	glm::mat4 model;    // 64...127
 };

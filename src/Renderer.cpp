@@ -150,7 +150,13 @@ void Renderer::updateProjectionMatrix()
 	m_proj[2][3] = -1.0f;
 }
 
-void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk::Semaphore waitSemaphore, const glm::mat4& viewMatrix)
+void Renderer::draw(
+		const Mesh& mesh,
+		uint32_t currentFrame,
+		vk::Fence fence,
+		vk::Semaphore waitSemaphore,
+		const glm::mat4& modelMatrix = defaultModel,
+		const glm::mat4& viewMatrix = defaultView )
 {
 	// 0. Check for Minimization
 	const auto extent = m_swapchain.getExtent();
@@ -179,7 +185,7 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 
 	// 3. Record
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordCommands(cmd, imageIndex, mesh, viewMatrix);
+	recordCommands(cmd, imageIndex, mesh, modelMatrix, viewMatrix);
 
 	// 4. Submit
 	// Signals 'renderSem' when rendering finishes, so Present can start.
@@ -221,7 +227,7 @@ void Renderer::draw(const Mesh& mesh, uint32_t currentFrame, vk::Fence fence, vk
 		{ recreateSwapchain(); }
 }
 
-void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix)
+void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& modelMatrix, const glm::mat4& viewMatrix)
 {
 	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
@@ -298,7 +304,7 @@ void Renderer::recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t image
 	cmd.setScissor(0, scissor);
 
 	// --- Push camera and projection matrices ---
-	const CameraPushConstants constants { .viewProj = m_proj * viewMatrix };
+	const CameraPushConstants constants { .viewProj = m_proj * viewMatrix, .model = modelMatrix};
 	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
 	// -------------------------
 

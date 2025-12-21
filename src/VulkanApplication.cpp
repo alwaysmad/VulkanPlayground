@@ -73,16 +73,12 @@ int VulkanApplication::run()
 
 		// --- Calculate Camera View ---
 		auto time = vulkanWindow.getTime();
-		float radius = 3.0f;
-		float camX = sin(time) * radius;
-		float camZ = cos(time) * radius;
-
-		// Orbiting around (0,0,0) at height 1.5
-		glm::mat4 view = glm::lookAt(
-			glm::vec3(camX, 1.5f, camZ), 
-			glm::vec3(0.0f, 0.0f, 0.0f), 
-			glm::vec3(0.0f, 1.0f, 0.0f)
-		);
+		
+		const glm::mat4 model = {
+			cos(time), -sin(time), 0.0f, 0.0f,
+			sin(time),  cos(time), 0.0f, 0.0f,
+			0.0f, 	    0.0f,      1.0f, 0.0f,
+			0.0f,       0.0f,      0.0f, 1.0f };
 		// -----------------------------
 
 		auto& fence = m_inFlightFences[currentFrame];
@@ -95,7 +91,7 @@ int VulkanApplication::run()
 
 		// 2. Render Step (Optional)
 		// Renderer now guarantees 'fence' is signaled even if it skips drawing.
-		renderer.draw(m_mesh, currentFrame, *fence, {}, view);
+		renderer.draw(m_mesh, currentFrame, *fence, {}, model);
 		
 		// 3. Flow Guaranteed: Always advance
 		currentFrame = VulkanCommand::advanceFrame(currentFrame);

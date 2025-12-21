@@ -24,13 +24,22 @@ public:
 	// - waitSemaphore (Optional): 
 	//     If provided (not null), the Graphics Queue will wait for this semaphore 
 	//     (at Vertex Input stage) before processing. Used to sync Compute -> Graphics.
-	void draw(const Mesh& mesh,
-		  uint32_t currentFrame,
-		  vk::Fence fence,
-		  vk::Semaphore waitSemaphore = {},
-		  const glm::mat4& viewMatrix = defaultView);
+	void draw(
+			const Mesh& mesh,
+			uint32_t currentFrame,
+			vk::Fence fence,
+			vk::Semaphore waitSemaphore = {},
+			const glm::mat4& ModelMatrix = defaultModel,
+			const glm::mat4& viewMatrix = defaultView );
 
 private:
+
+	static constexpr glm::mat4 defaultModel = {
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
 
 	// Default View: Eye(0, 1.5, 3), Center(0,0,0), Up(0,1,0)
 	// Precomputed values:
@@ -68,7 +77,7 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer& cmd, uint32_t imageIndex, const Mesh& mesh, const glm::mat4& viewMatrix);
+	void recordCommands(const vk::raii::CommandBuffer&, uint32_t, const Mesh&, const glm::mat4&, const glm::mat4&);
 	void recreateSwapchain();
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
