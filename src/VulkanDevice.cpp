@@ -88,6 +88,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	const auto features = m_physicalDevice.template getFeatures2<
 		vk::PhysicalDeviceFeatures2,
 		vk::PhysicalDeviceVulkan11Features,
+		vk::PhysicalDeviceVulkan12Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT >();
 	
@@ -249,21 +250,27 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	const vk::StructureChain<
 		vk::PhysicalDeviceFeatures2,
 		vk::PhysicalDeviceVulkan11Features,
+		vk::PhysicalDeviceVulkan12Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
 	> featureChain = {
 		// Core Features 1.0 (Enable samplerAnisotropy if needed)
 		{ .features = { .samplerAnisotropy = vk::True } },
-
 		// Vulkan 1.1 Features
-		{ .shaderDrawParameters = vk::True },
-
+		{
+			.storagePushConstant16 = vk::True,
+			.shaderDrawParameters = vk::True
+		},
+		// Vulkan 1.2 Features
+		{
+			.shaderFloat16 = vk::True,         // <--- NEW: Enable 'half' in shaders
+			// .bufferDeviceAddress = vk::True // (Commonly enabled here too, but optional for now)
+		},
 		// Vulkan 1.3 Features
 		{
 			.synchronization2 = vk::True,
 			.dynamicRendering = vk::True
 		},
-
 		// Extended Dynamic State
 		{ .extendedDynamicState = vk::True }
 	};

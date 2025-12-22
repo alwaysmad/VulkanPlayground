@@ -1,7 +1,7 @@
 // 1. Push Constants
 struct PushConstants
 {
-	float4x4 viewProj;
+	half4x4 viewProj;
 	float4x4 model;
 };
 

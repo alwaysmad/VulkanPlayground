@@ -73,12 +73,14 @@ int VulkanApplication::run()
 
 		// --- 
 		const auto time = vulkanWindow.getTime();
+		const auto cos_time = cos(time);
+		const auto sin_time = sin(time);
 		
 		const glm::mat4 model = {
-			cos(time),  0.0f,      sin(time),  0.0f,
-			0.0f,       1.0f,      0.0f,       0.0f,
-			-sin(time), 0.0f,      cos(time),  0.0f,
-			0.0f,       0.0f,      0.0f,       1.0f };
+			cos_time,   0.0f,      sin_time, 0.0f,
+			0.0f,       1.0f,      0.0f,     0.0f,
+			-sin_time,  0.0f,      cos_time, 0.0f,
+			0.0f,       0.0f,      0.0f,     1.0f };
 		// ---
 
 		auto& fence = m_inFlightFences[currentFrame];

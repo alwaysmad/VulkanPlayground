@@ -127,7 +127,7 @@ void Renderer::updateProjectionMatrix()
 	// f = 1.0 / tan(fov / 2)
 	// For 45 deg, tan(22.5) approx 0.4142 -> f approx 2.4142
 	constexpr float f = 2.41421356f;
-	constexpr float near = 0.1f;
+	constexpr float near = 1.0f;
 
 	m_proj = glm::mat4(0.0f);
 
@@ -309,7 +309,7 @@ void Renderer::recordCommands(
 	cmd.setScissor(0, scissor);
 
 	// --- Push camera and projection matrices ---
-	const CameraPushConstants constants { .viewProj = m_proj * viewMatrix, .model = modelMatrix};
+	const CameraPushConstants constants { .viewProj = PackedHalfMat4(m_proj * viewMatrix), .model = modelMatrix};
 	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
 	// -------------------------
 
