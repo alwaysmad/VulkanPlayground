@@ -51,9 +51,10 @@ void VulkanLoader::uploadMesh(Mesh& mesh)
 		{ throw std::runtime_error("Trying to upload empty mesh"); }
 	auto [vBuf, vMem] = uploadToDevice(
 		mesh.vertices.data(), 
-		VertexTraits::bindingDescription.stride * mesh.vertices.size(), 
-		vk::BufferUsageFlagBits::eVertexBuffer
-	);
+		VertexTraits::bindingDescription.stride * mesh.vertices.size(),
+		// Allow both Vertex Input AND Compute Storage
+		vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer
+	);	
 	mesh.vertexBuffer = std::move(vBuf);
 	mesh.vertexMemory = std::move(vMem);
 

@@ -1,6 +1,7 @@
 // src/VulkanDevice.cpp
 #include "VulkanInstance.hpp"
 #include "VulkanDevice.hpp"
+#include "Satellite.hpp" // only for requiredUBOsize
 
 static constexpr std::array requiredDeviceExtensions = { 
 	vk::KHRSwapchainExtensionName,
@@ -120,6 +121,28 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 					{ return strcmp(extensionProperty.extensionName, requiredDeviceExtension) == 0; }
 				))
 		{ throw std::runtime_error("Required device extension not supported: " + std::string(requiredDeviceExtension)); }
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Check UBO Size Limits
+	////////////////////////////////////////////////////////////////////////////////
+	const auto uboLimit = props.limits.maxUniformBufferRange;
+
+	LOG_DEBUG("Device UBO Limit: " << uboLimit << " bytes");
+	LOG_DEBUG("Required Satellite Buffer: " << requiredUBOsize << " bytes");
+
+	if (uboLimit < requiredUBOsize)
+	{
+		// Yell at the user (Critical Error)
+		std::cerr << DBG_COLOR_RED
+			<< "Selected device '" << props.deviceName
+			<< "' has insufficient Uniform Buffer space!" << std::endl;
+		std::cerr << "\tLimit: " << uboLimit << " bytes" << std::endl;
+		std::cerr << "\tRequired: " << requiredUBOsize << " bytes" << std::endl;
+		std::cerr << "Switching to Storage Buffers (SSBO) is required for this hardware."
+			<< DBG_COLOR_RESET << std::endl;
+
+		throw std::runtime_error("Device UBO limit too small for satellite data");
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
