@@ -85,36 +85,45 @@ message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
 
 # --- Define Shader Compilation Function ---
 function(add_slang_shader_target TARGET_NAME)
-	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
-	# Get the source filename without extension (e.g., "triangle")
+	# parse arguments list
+	cmake_parse_arguments(ARG "" "" "SOURCES;ENTRIES" ${ARGN})
+
 	list(GET ARG_SOURCES 0 MAIN_SOURCE)
 	get_filename_component(SHADER_NAME ${MAIN_SOURCE} NAME_WE)
-	
+
 	set(WORK_DIR ${CMAKE_CURRENT_BINARY_DIR})
 	set(OUTPUT_SPV ${WORK_DIR}/${SHADER_NAME}.spv)
 	set(OUTPUT_HEADER ${WORK_DIR}/${SHADER_NAME}.hpp)
-	
-	set(ENTRY_POINTS -entry vertMain -entry fragMain)
+
+	# Generate flags dynamically based on input
+	set(ENTRY_POINT_FLAGS "")
+	if(ARG_ENTRIES)
+		foreach(ENTRY ${ARG_ENTRIES})
+			list(APPEND ENTRY_POINT_FLAGS "-entry" "${ENTRY}")
+		endforeach()
+	else()
+		# Default fallback (for triangle.slang)
+		set(ENTRY_POINT_FLAGS "-entry" "vertMain" "-entry" "fragMain")
+	endif()
 
 	add_custom_command(
 		OUTPUT ${OUTPUT_HEADER}
-		# 1. Compile Slang -> SPV
+		# Use ${ENTRY_POINT_FLAGS} variable
 		COMMAND ${SLANGC_EXECUTABLE} ${ARG_SOURCES} 
 			-target spirv -profile spirv_1_4 -emit-spirv-directly 
-			-fvk-use-entrypoint-name ${ENTRY_POINTS} 
+			-fvk-use-entrypoint-name ${ENTRY_POINT_FLAGS} 
 			-o ${OUTPUT_SPV}
-			
-		# 2. Embed SPV -> C++ Header (using our script)
+
 		COMMAND ${CMAKE_COMMAND} 
 			-DINPUT_FILE=${OUTPUT_SPV} 
 			-DOUTPUT_FILE=${OUTPUT_HEADER}
 			-DNAMESPACE=${SHADER_NAME}
 			-P ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
-		
+
 		DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
 		COMMENT "Compiling and Embedding Slang Shader: ${SHADER_NAME}"
 	)
-	
+
 	add_custom_target(${TARGET_NAME} DEPENDS ${OUTPUT_HEADER})
 endfunction()
 

@@ -2,9 +2,9 @@
 #include "VulkanDevice.hpp"
 #include "solver.hpp" // Generated from shaders/solver.slang
 
-ComputePipeline::ComputePipeline(const VulkanDevice& device) :
+ComputePipeline::ComputePipeline(const VulkanDevice& device)
 {
-	constexpr std::array<vk::DescriptorSetLayoutBinding, 2> bindings = 
+	static constexpr std::array<vk::DescriptorSetLayoutBinding, 2> bindings = 
 	{{
 		// Binding 0: Satellites (UBO)
 		{
@@ -60,4 +60,4 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device) :
 	LOG_DEBUG("Compute Pipeline create");
 }
 
-ComputePipeline::~ComputePipeline() { LOG_DEBUG("Compute Pipeline destroyed") }
+ComputePipeline::~ComputePipeline() { LOG_DEBUG("Compute Pipeline destroyed"); }

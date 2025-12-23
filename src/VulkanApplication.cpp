@@ -10,7 +10,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, &vulkanWindow.getSurface(), DeviceName),
 	vulkanLoader(vulkanDevice),
-	computer(VulkanDevice),
+	computer(vulkanDevice),
 	renderer(vulkanDevice, vulkanWindow)
 {
 	// Create Fences (Signaled so we don't wait on first frame)

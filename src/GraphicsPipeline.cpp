@@ -7,9 +7,7 @@
 
 static constexpr auto  pushConstantSize = sizeof(CameraPushConstants);
 
-GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat) :
-	m_pipelineLayout(nullptr),
-	m_pipeline(nullptr)
+GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat)
 {
 	// 1. Load Shaders
 	constexpr vk::ShaderModuleCreateInfo smci {
