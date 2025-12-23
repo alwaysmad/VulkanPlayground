@@ -1,6 +1,4 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/gtc/packing.hpp> // Required for packHalf
 
 // Helper struct for 16-bit 4x4 Matrix (32 bytes)
 struct PackedHalfMat4
@@ -18,8 +16,6 @@ struct PackedHalfMat4
 		}
 	}
 };
-
-
 
 struct CameraPushConstants
 {

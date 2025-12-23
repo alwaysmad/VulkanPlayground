@@ -1,6 +1,6 @@
 #include "GraphicsPipeline.hpp"
 #include "VulkanDevice.hpp"
-#include "Vertex.hpp"
+#include "Mesh.hpp"
 #include "Uniforms.hpp"
 
 #include "triangle.hpp" // The generated header
@@ -32,9 +32,9 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 	// 3. Vertex input
 	constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo {
 		.vertexBindingDescriptionCount = 1,
-		.pVertexBindingDescriptions = &VertexTraits::bindingDescription,
-		.vertexAttributeDescriptionCount = static_cast<uint32_t>(VertexTraits::attributeDescriptions.size()),
-		.pVertexAttributeDescriptions = VertexTraits::attributeDescriptions.data()
+		.pVertexBindingDescriptions = &Mesh::bindingDescription,
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(Mesh::attributeDescriptions.size()),
+		.pVertexAttributeDescriptions = Mesh::attributeDescriptions.data()
 	};
 	// 4. Input assembly
 	constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
