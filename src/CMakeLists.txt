@@ -9,8 +9,10 @@ target_sources(simplevk PRIVATE
 	VulkanInstance.cpp
 	VulkanDevice.cpp
 	VulkanSwapchain.cpp
-	VulkanPipeline.cpp
 	VulkanLoader.cpp
+	ComputePipeline.cpp
+	Computer.cpp
+	GraphicsPipeline.cpp
 	Renderer.cpp
 )
 
@@ -71,5 +73,6 @@ target_precompile_headers(simplevk PRIVATE
 add_slang_shader_target(
 	CompileShaders
 	SOURCES ${CMAKE_SOURCE_DIR}/shaders/triangle.slang
+	SOURCES ${CMAKE_SOURCE_DIR}/shaders/solver.slang
 )
 add_dependencies(simplevk CompileShaders)

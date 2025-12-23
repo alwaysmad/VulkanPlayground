@@ -1,4 +1,4 @@
-#include "VulkanPipeline.hpp"
+#include "GraphicsPipeline.hpp"
 #include "VulkanDevice.hpp"
 #include "Vertex.hpp"
 #include "Uniforms.hpp"
@@ -7,25 +7,17 @@
 
 static constexpr auto  pushConstantSize = sizeof(CameraPushConstants);
 
-[[nodiscard]] inline static vk::raii::ShaderModule createShaderModule(
-		const vk::raii::Device& device,
-		const unsigned char* data,
-		size_t len)
-{
-	const vk::ShaderModuleCreateInfo createInfo {
-		.codeSize = len,
-		.pCode = reinterpret_cast<const uint32_t*>(data)
-	};
-	return vk::raii::ShaderModule(device, createInfo);
-} 
-
-VulkanPipeline::VulkanPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat) :
-	m_device(device),
+GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat) :
 	m_pipelineLayout(nullptr),
 	m_pipeline(nullptr)
 {
 	// 1. Load Shaders
-	const vk::raii::ShaderModule shaderModule = createShaderModule(m_device.device(), triangle::code, triangle::size);
+	constexpr vk::ShaderModuleCreateInfo smci {
+		.flags = {},
+		.codeSize = triangle::size,
+		.pCode = triangle::code
+	};
+	const vk::raii::ShaderModule shaderModule = vk::raii::ShaderModule(device.device(), smci);
 	// 2. Shader Stages
 	const vk::PipelineShaderStageCreateInfo shaderStages[] = {
 		{
@@ -147,5 +139,5 @@ VulkanPipeline::VulkanPipeline(const VulkanDevice& device, vk::Format colorForma
 	LOG_DEBUG("Graphics Pipeline created");
 }
 
-VulkanPipeline::~VulkanPipeline()
-	{ LOG_DEBUG("Graphics Pipeline destroyed"); }
+
+GraphicsPipeline::~GraphicsPipeline() { LOG_DEBUG("Graphics Pipeline destroyed"); }

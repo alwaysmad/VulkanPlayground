@@ -4,8 +4,9 @@
 #include "VulkanInstance.hpp"
 #include "VulkanWindow.hpp"
 #include "VulkanDevice.hpp"
-#include "Renderer.hpp"
 #include "VulkanLoader.hpp"
+#include "Computer.hpp"
+#include "Renderer.hpp"
 
 class VulkanApplication
 {
@@ -15,7 +16,8 @@ private:
 	VulkanInstance vulkanInstance;
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
-	VulkanLoader vulkanLoader;	
+	VulkanLoader vulkanLoader;
+	Computer computer;
 	Renderer renderer;
 
 	// Orchestration Sync (Owned by App)

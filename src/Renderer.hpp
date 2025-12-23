@@ -1,6 +1,6 @@
 #pragma once
 #include "VulkanSwapchain.hpp"
-#include "VulkanPipeline.hpp"
+#include "GraphicsPipeline.hpp"
 #include "VulkanCommand.hpp" 
 #include "Mesh.hpp"
 
@@ -68,7 +68,7 @@ private:
 	vk::raii::ImageView m_depthView = nullptr;
 	vk::Format          m_depthFormat;
 		
-	VulkanPipeline  m_pipeline;
+	GraphicsPipeline m_pipeline;
 
 	// Sync
 	// Fixed size [MAX_FRAMES_IN_FLIGHT]
