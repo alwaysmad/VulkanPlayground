@@ -47,4 +47,7 @@ public:
 
 	TrackedDeviceMemory indexMemory;
 	vk::raii::Buffer indexBuffer = nullptr;
+
+	explicit Mesh() { LOG_DEBUG("Mesh created"); }
+	~Mesh() { LOG_DEBUG("Mesh destroyed"); }
 };

@@ -10,6 +10,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, &vulkanWindow.getSurface(), DeviceName),
 	vulkanLoader(vulkanDevice),
+	satelliteNetwork(vulkanDevice), m_mesh(),
 	computer(vulkanDevice),
 	renderer(vulkanDevice, vulkanWindow)
 {

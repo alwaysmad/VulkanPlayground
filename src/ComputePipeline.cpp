@@ -57,7 +57,7 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 
 	m_pipeline = device.device().createComputePipeline(nullptr, pipelineInfo);
 
-	LOG_DEBUG("Compute Pipeline create");
+	LOG_DEBUG("Compute Pipeline created");
 }
 
 ComputePipeline::~ComputePipeline() { LOG_DEBUG("Compute Pipeline destroyed"); }

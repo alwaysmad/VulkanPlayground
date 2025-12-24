@@ -2,6 +2,8 @@
 #include "VulkanDevice.hpp"
 #include "VulkanCommand.hpp"
 #include "ComputePipeline.hpp"
+#include "Satellite.hpp"
+#include "Mesh.hpp"
 
 class Computer
 {
@@ -14,8 +16,8 @@ public:
 	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
 	void compute(vk::Fence fence, vk::Semaphore signalSemaphore = nullptr);
 
-	// We will add methods to register/update Satellites here later
-	// void updateSatellites(...) 
+	// Link the Data (Mesh + Satellites) to the Compute Pipeline
+	void registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet);
 
 private:
 	const VulkanDevice& m_device;
@@ -26,5 +28,10 @@ private:
 	// Owns its own Pipeline
 	ComputePipeline m_pipeline;
 
+	// Descriptors
+	vk::raii::DescriptorPool m_descriptorPool = nullptr;
+	vk::raii::DescriptorSets m_descriptorSets = nullptr;
+
+	void createDescriptors();
 	void recordComputeCommands(const vk::raii::CommandBuffer& cmd);
 };

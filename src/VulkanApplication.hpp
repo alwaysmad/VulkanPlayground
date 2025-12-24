@@ -7,6 +7,7 @@
 #include "VulkanLoader.hpp"
 #include "Computer.hpp"
 #include "Renderer.hpp"
+#include "Satellite.hpp"
 
 class VulkanApplication
 {
@@ -17,6 +18,10 @@ private:
 	VulkanWindow vulkanWindow;
 	VulkanDevice vulkanDevice;
 	VulkanLoader vulkanLoader;
+	
+	SatelliteNetwork satelliteNetwork;
+	Mesh m_mesh;
+
 	Computer computer;
 	Renderer renderer;
 
@@ -25,7 +30,6 @@ private:
 	// Future: m_computeFinishedSemaphores
 	
 	// Mesh and helpers
-	Mesh m_mesh;
 	void fillMesh();
 public:
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);

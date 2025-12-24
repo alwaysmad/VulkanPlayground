@@ -14,6 +14,7 @@ target_sources(simplevk PRIVATE
 	Computer.cpp
 	GraphicsPipeline.cpp
 	Renderer.cpp
+	Satellite.cpp
 )
 
 # 3. Compile Definitions
