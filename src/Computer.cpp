@@ -12,14 +12,14 @@ Computer::Computer(const VulkanDevice& device) :
 
 Computer::~Computer() { LOG_DEBUG("Computer destroyed"); }
 
-void Computer::compute(vk::Fence fence, vk::Semaphore signalSemaphore)
+void Computer::compute(uint32_t currentFrame, vk::Fence fence, vk::Semaphore signalSemaphore)
 {
 	// 1. Reset Fence (CPU Sync)
 	// Only reset/use fence if one is actually provided (in Headless mode)
 	if (fence) { m_device.device().resetFences({fence}); }
 
 	// 2. Record Commands
-	const auto& cmd = m_command.getBuffer(0); // We only need 1 buffer for compute usually
+	const auto& cmd = m_command.getBuffer(currentFrame);
 	recordComputeCommands(cmd);
 
 	// 3. Submit

@@ -40,15 +40,26 @@ void VulkanApplication::fillMesh()
 	// Position (x,y,z,w) | Color (r,g,b,a)
 	m_mesh.vertices = {
 		// Front Face (Z = -0.5)
-		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
+		// Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
+		// Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
+		// Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
+		// Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
 		// Back Face (Z = +0.5)
-		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: white
-		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f})  // 7: cyan
+		// Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
+		// Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
+		// Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: white
+		// Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f})  // 7: cyan
+		//
+		// Front Face (Z = -0.5)
+		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 1: red
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 2: yellow
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 3: green
+		// Back Face (Z = +0.5)
+		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 4: blue
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 5: magenta
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 6: white
+		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f})  // 7: cyan
 	};
 
 	m_mesh.indices = {
@@ -103,8 +114,8 @@ int VulkanApplication::run()
 		for (size_t i = 0; i < satelliteNetwork.satellites.size(); ++i)
 		{
 			// Give each index a different phase offset so they blink differently
-			const float offset = (float)i * 0.8f;
-			const std::array<float, 4> col = getCosineColor(time * 2.0f, offset);
+			const float offset = float(i) * 0.8f;
+			const auto col = getCosineColor(time * 2.0f, offset);
 
 			// Copy to the 'data' field (which maps to 'color' in shader)
 			std::memcpy(satelliteNetwork.satellites[i].data, col.data(), sizeof(col));
@@ -114,7 +125,7 @@ int VulkanApplication::run()
         	satelliteNetwork.upload();
 
 		// --- 
-		constexpr auto rotSpeed = 0.1f;
+		constexpr auto rotSpeed = 0.2f;
 		const auto cos_time = cos(time * rotSpeed);
 		const auto sin_time = sin(time * rotSpeed);
 		
@@ -129,7 +140,7 @@ int VulkanApplication::run()
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
-		computer.compute(nullptr, *computeSem);
+		computer.compute(currentFrame, nullptr, *computeSem);
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices

@@ -278,9 +278,15 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
 	> featureChain = {
 		// Core Features 1.0 (Enable samplerAnisotropy if needed)
-		{ .features = { .samplerAnisotropy = vk::True } },
+		{ .features = {
+				      .samplerAnisotropy = vk::True,
+				      .shaderInt16 = vk::True // Required for 'int16_t' in shader
+			      }
+		},
 		// Vulkan 1.1 Features
 		{
+			.storageBuffer16BitAccess = vk::True, // <--- Required for SSBO
+			.uniformAndStorageBuffer16BitAccess = vk::True, // <--- Required for UBO
 			.storagePushConstant16 = vk::True,
 			.shaderDrawParameters = vk::True
 		},

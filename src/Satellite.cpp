@@ -5,8 +5,8 @@ SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count)
 {
 	// Yell at user if too many satellites
 	if (count > MAX_SATELLITES)
-		{ throw std::runtime_error("Satellite count is higher " + MAX_SATELLITES); }
-	
+		{ throw std::runtime_error("Satellite count is higher " + std::to_string(MAX_SATELLITES)); }
+
 	// Pre-allocate vector capacity to avoid reallocations
 	satellites.reserve(count);
 
