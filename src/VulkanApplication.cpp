@@ -17,6 +17,12 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 
 	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
 		{ m_inFlightFences.emplace_back(vulkanDevice.device(), fenceInfo); }
+
+	// Create Semaphores
+	constexpr vk::SemaphoreCreateInfo semInfo{};
+	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
+		{ m_computeFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo); }
+
 	LOG_DEBUG("VulkanApplication instance created");
 }
 

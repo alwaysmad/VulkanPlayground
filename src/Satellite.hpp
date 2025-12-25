@@ -16,6 +16,8 @@ struct SatelliteData
 
 // Calculate required size
 constexpr vk::DeviceSize requiredUBOsize = sizeof(SatelliteData) * MAX_SATELLITES;
+// This matches the shader's "Satellite satellites[512]" definition.
+// 512 * 80 bytes = 40,960 bytes (well under 64KB limit).
 
 class SatelliteNetwork
 {
@@ -30,12 +32,18 @@ public:
 	// 2. GPU Sync
 	// Copies the current 'satellites' vector to the UBO.
 	// Safe to call every frame.
-	void upload();
+	inline void upload()
+	{
+		// Ignore safety checks
+		// if (!m_mappedPtr || satellites.empty()) return;
+
+		// Copy the raw vector data directly to the GPU buffer
+		// We trust the user not to exceed the capacity set in constructor
+		std::memcpy(m_mappedPtr, satellites.data(), satellites.size() * sizeof(SatelliteData));
+	}
 
 	// 3. Getters for Descriptor Binding
 	inline const vk::raii::Buffer& getBuffer() const { return m_buffer; }
-	inline vk::DeviceSize getSize() const { return m_bufferSize; }
-
 private:
 	const VulkanDevice& m_device;
 
@@ -45,6 +53,4 @@ private:
 
 	// Pointer to mapped GPU memory (Host Visible)
 	void* m_mappedPtr = nullptr;
-
-	vk::DeviceSize m_bufferSize;
 };

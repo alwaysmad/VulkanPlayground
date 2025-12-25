@@ -33,8 +33,7 @@ private:
 	vk::raii::DescriptorSets m_descriptorSets = nullptr;
 	
 	// Store these to update push constants
-	uint32_t m_satelliteCount = 0;
-	uint32_t m_vertexCount = 0;
+	uint32_t pcData[2] = {0, 0};
 
 	void createDescriptors();
 	void recordComputeCommands(const vk::raii::CommandBuffer& cmd);
