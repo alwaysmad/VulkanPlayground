@@ -45,7 +45,7 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 	const vk::DescriptorBufferInfo uboInfo {
 		.buffer = *satNet.getBuffer(),
 		.offset = 0,
-		.range = requiredUBOsize
+		.range = satNet.getFrameSize()
 	};
 
 	// Binding 1: Earth (SSBO)
@@ -54,7 +54,7 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 		.offset = 0,
 		// Bind ONE frame's worth of size.
 		// The offset determines WHICH frame we see.
-		.range = satNet.getFrameSize()
+		.range = vk::WholeSize
 	};
 
 	const std::array<vk::WriteDescriptorSet, 2> descriptorWrites =
@@ -63,7 +63,7 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 			.dstSet = *m_descriptorSets[0],
 			.dstBinding = 0,
 			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
+			.descriptorType = vk::DescriptorType::eUniformBufferDynamic,
 			.pBufferInfo = &uboInfo
 		},
 		{
