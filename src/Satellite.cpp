@@ -9,10 +9,19 @@ SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count)
 
 	// Pre-allocate vector capacity to avoid reallocations
 	satellites.reserve(count);
+	satellites.resize(count);
+
+	// 1. Calculate Aligned Size
+	// Uniform Buffer offsets must be aligned to minUniformBufferOffsetAlignment (usually 256 bytes)
+	const auto align = m_device.physicalDevice().getProperties().limits.minUniformBufferOffsetAlignment;
+	m_frameSize = (requiredUBOsize + align - 1) & ~(align - 1); // Align up
+
+	// 2. Allocate Total Size
+	vk::DeviceSize totalSize = m_frameSize * MAX_FRAMES_IN_FLIGHT;
 
 	// Create UBO (Host Visible = CPU can write to it)
 	auto [buf, mem] = m_device.createBuffer(
-			requiredUBOsize, // Always allocate the FULL size (512 elements)
+			totalSize,
 			vk::BufferUsageFlagBits::eUniformBuffer,
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 	);

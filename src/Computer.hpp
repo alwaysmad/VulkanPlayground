@@ -14,7 +14,11 @@ public:
 	// The main function. 
 	// - 'fence': Signaled when compute finishes (CPU Sync)
 	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
-	void compute(uint32_t currentFrame, vk::Fence fence, vk::Semaphore signalSemaphore = {});
+	void Computer::compute (
+		uint32_t currentFrame,
+		const SatelliteNetwork& satNet,
+		vk::Fence fence, 
+		vk::Semaphore signalSemaphore = {} )
 
 	// Link the Data (Mesh + Satellites) to the Compute Pipeline
 	void registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet);
@@ -35,6 +39,5 @@ private:
 	// Store these to update push constants
 	uint32_t pcData[2] = {0, 0};
 
-	void createDescriptors();
-	void recordComputeCommands(const vk::raii::CommandBuffer& cmd);
+	void recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset);
 };

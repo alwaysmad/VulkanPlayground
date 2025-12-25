@@ -68,6 +68,7 @@ target_precompile_headers(simplevk PRIVATE
 
 	# Project Local
 	"DebugOutput.hpp" # Works now because of step 4!
+	"Frames.hpp"
 )
 
 # 7. Shaders

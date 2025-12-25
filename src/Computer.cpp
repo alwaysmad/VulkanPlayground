@@ -6,40 +6,10 @@ Computer::Computer(const VulkanDevice& device) :
 	m_command(device, device.getComputeQueueIndex()),
 	m_pipeline(device)
 {
-	createDescriptors();
-	LOG_DEBUG("Computer initialized");
-}
-
-Computer::~Computer() { LOG_DEBUG("Computer destroyed"); }
-
-void Computer::compute(uint32_t currentFrame, vk::Fence fence, vk::Semaphore signalSemaphore)
-{
-	// 1. Reset Fence (CPU Sync)
-	// Only reset/use fence if one is actually provided (in Headless mode)
-	if (fence) { m_device.device().resetFences({fence}); }
-
-	// 2. Record Commands
-	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordComputeCommands(cmd);
-
-	// 3. Submit
-	const vk::SubmitInfo submitInfo {
-		.commandBufferCount = 1,
-		.pCommandBuffers = &*cmd,
-		.signalSemaphoreCount = signalSemaphore ? 1u : 0u,
-		.pSignalSemaphores = signalSemaphore ? &signalSemaphore : nullptr
-	};
-
-	// Submit to the compute queue
-	m_device.computeQueue().submit(submitInfo, fence);
-}
-	
-void Computer::createDescriptors()
-{
 	// 1. Create Pool
 	static constexpr std::array<vk::DescriptorPoolSize, 2> poolSizes =
 	{{
-		{ vk::DescriptorType::eUniformBuffer, 1 },
+		{ vk::DescriptorType::eUniformBufferDynamic, 1 },
 		{ vk::DescriptorType::eStorageBuffer, 1 }
 	}};
 
@@ -58,7 +28,11 @@ void Computer::createDescriptors()
 		.pSetLayouts = &*m_pipeline.getDescriptorSetLayout()
 	};
 	m_descriptorSets = vk::raii::DescriptorSets(m_device.device(), allocInfo);
+
+	LOG_DEBUG("Computer initialized");
 }
+
+Computer::~Computer() { LOG_DEBUG("Computer destroyed"); }
 
 void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet)
 {
@@ -68,17 +42,19 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 
 	// 2. Update Descriptors
 	// Binding 0: Satellites (UBO)
-	vk::DescriptorBufferInfo uboInfo {
+	const vk::DescriptorBufferInfo uboInfo {
 		.buffer = *satNet.getBuffer(),
 		.offset = 0,
 		.range = requiredUBOsize
 	};
 
 	// Binding 1: Earth (SSBO)
-	vk::DescriptorBufferInfo ssboInfo {
+	const vk::DescriptorBufferInfo ssboInfo {
 		.buffer = *earthMesh.vertexBuffer,
 		.offset = 0,
-		.range = vk::WholeSize
+		// Bind ONE frame's worth of size.
+		// The offset determines WHICH frame we see.
+		.range = satNet.getFrameSize()
 	};
 
 	const std::array<vk::WriteDescriptorSet, 2> descriptorWrites =
@@ -103,7 +79,33 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 	LOG_DEBUG("Computer resources registered");
 }
 
-void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd)
+void Computer::compute (
+		uint32_t currentFrame,
+		const SatelliteNetwork& satNet,
+		vk::Fence fence, 
+		vk::Semaphore signalSemaphore )
+{
+	// 1. Reset Fence (CPU Sync)
+	// Only reset/use fence if one is actually provided (in Headless mode)
+	if (fence) { m_device.device().resetFences({fence}); }
+
+	// 2. Record Commands
+	const auto& cmd = m_command.getBuffer(currentFrame);
+	recordComputeCommands(cmd, currentFrame * satNet.getFrameSize() );
+
+	// 3. Submit
+	const vk::SubmitInfo submitInfo {
+		.commandBufferCount = 1,
+		.pCommandBuffers = &*cmd,
+		.signalSemaphoreCount = signalSemaphore ? 1u : 0u,
+		.pSignalSemaphores = signalSemaphore ? &signalSemaphore : nullptr
+	};
+
+	// Submit to the compute queue
+	m_device.computeQueue().submit(submitInfo, fence);
+}
+
+void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset)
 {
 	cmd.reset();
 	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
@@ -116,7 +118,7 @@ void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd)
 			*m_pipeline.getLayout(),
 			0,
 			{*m_descriptorSets[0]},
-			nullptr
+			{ dynamicOffset } // Pass the offset here
 	);
 
 	// --- PUSH CONSTANTS ---

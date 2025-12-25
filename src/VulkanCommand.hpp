@@ -4,11 +4,6 @@
 class VulkanCommand
 {
 public:
-	static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
-	static inline uint32_t advanceFrame(uint32_t currentFrame) 
-		{ return currentFrame ^ 1u; }
-
 	VulkanCommand(const VulkanDevice& device, uint32_t queueFamilyIndex)
 		: m_commandPool(
 			device.device(),

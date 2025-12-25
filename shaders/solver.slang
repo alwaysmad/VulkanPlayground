@@ -26,8 +26,8 @@ struct SatelliteBlock
 // --- Push Constants ---
 struct PushConstants
 {
-	uint satelliteCount;
 	uint vertexCount;
+	uint satelliteCount;
 };
 [[vk::push_constant]]
 PushConstants pc;

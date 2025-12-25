@@ -74,12 +74,12 @@ void VulkanApplication::fillMesh()
 
 // Helper for Cosine Palette in C++
 // A simple wrapper to keep the main loop clean
-static std::array<float, 4> getCosineColor(float t, float offset)
+static inline std::array<float, 4> getCosineColor(float t, float offset)
 {
 	// Simple Rainbow: r, g, b phase shifted
-	float r = 0.5f + 0.5f * std::cos(t + offset);
-	float g = 0.5f + 0.5f * std::cos(t + offset + 2.0f);
-	float b = 0.5f + 0.5f * std::cos(t + offset + 4.0f);
+	const float r = 0.5f + 0.5f * std::cos(t + offset);
+	const float g = 0.5f + 0.5f * std::cos(t + offset + 2.0f);
+	const float b = 0.5f + 0.5f * std::cos(t + offset + 4.0f);
 	return { r, g, b, 1.0f };
 }
 
@@ -90,12 +90,13 @@ int VulkanApplication::run()
 	// 1. Prepare Data
 	fillMesh();
 	vulkanLoader.uploadMesh(m_mesh);
+	satelliteNetwork.satellites.resize(8);
 	
-	// 3. Register Resources (Link Mesh + Satellites to Computer)
+	// 2. Register Resources (Link Mesh + Satellites to Computer)
 	computer.registerResources(m_mesh, satelliteNetwork);
 
 	uint32_t currentFrame = 0;
-	// 2. Loop
+	// 3. Loop
 	while (!vulkanWindow.shouldClose())
 	{
 		vulkanWindow.pollEvents();
@@ -126,8 +127,8 @@ int VulkanApplication::run()
 
 		// --- 
 		constexpr auto rotSpeed = 0.2f;
-		const auto cos_time = cos(time * rotSpeed);
-		const auto sin_time = sin(time * rotSpeed);
+		const auto cos_time = std::cos(time * rotSpeed);
+		const auto sin_time = std::sin(time * rotSpeed);
 		
 		const glm::mat4 model = {
 			cos_time,   0.0f,      sin_time, 0.0f,

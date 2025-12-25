@@ -32,18 +32,21 @@ public:
 	// 2. GPU Sync
 	// Copies the current 'satellites' vector to the UBO.
 	// Safe to call every frame.
-	inline void upload()
+	inline void upload(uint32_t currentFrame)
 	{
-		// Ignore safety checks
-		// if (!m_mappedPtr || satellites.empty()) return;
+		// Calculate where to write for THIS frame
+		const size_t offset = currentFrame * m_frameSize;
+		char* dst = static_cast<char*>(m_mappedPtr) + offset;
 
-		// Copy the raw vector data directly to the GPU buffer
-		// We trust the user not to exceed the capacity set in constructor
-		std::memcpy(m_mappedPtr, satellites.data(), satellites.size() * sizeof(SatelliteData));
+		// Write only the active data
+		std::memcpy(dst, satellites.data(), satellites.size() * sizeof(SatelliteData));
 	}
 
 	// 3. Getters for Descriptor Binding
 	inline const vk::raii::Buffer& getBuffer() const { return m_buffer; }
+
+	// Helper to get the aligned size per frame
+	inline vk::DeviceSize getFrameSize() const { return m_frameSize; }
 private:
 	const VulkanDevice& m_device;
 
@@ -53,4 +56,6 @@ private:
 
 	// Pointer to mapped GPU memory (Host Visible)
 	void* m_mappedPtr = nullptr;
+
+	vk::DeviceSize m_frameSize; // Size of one frame's data (aligned)
 };
