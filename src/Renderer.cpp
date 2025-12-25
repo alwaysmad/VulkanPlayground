@@ -21,7 +21,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
 
-	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{ m_imageAvailableSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
 
 	// 2. Create Per-Image Sync Objects (Render Finished)

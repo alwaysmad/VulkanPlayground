@@ -15,12 +15,12 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	// Create Fences (Signaled so we don't wait on first frame)
 	constexpr vk::FenceCreateInfo fenceInfo{ .flags = vk::FenceCreateFlagBits::eSignaled };
 
-	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{ m_inFlightFences.emplace_back(vulkanDevice.device(), fenceInfo); }
 
 	// Create Semaphores
 	constexpr vk::SemaphoreCreateInfo semInfo{};
-	for (uint32_t i = 0; i < VulkanCommand::MAX_FRAMES_IN_FLIGHT; ++i)
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 		{ m_computeFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo); }
 
 	LOG_DEBUG("VulkanApplication instance created");
@@ -123,7 +123,7 @@ int VulkanApplication::run()
 		}
 
 		// Upload new data to UBO
-        	satelliteNetwork.upload();
+        	satelliteNetwork.upload(currentFrame);
 
 		// --- 
 		constexpr auto rotSpeed = 0.2f;
@@ -141,14 +141,14 @@ int VulkanApplication::run()
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
-		computer.compute(currentFrame, nullptr, *computeSem);
+		computer.compute(currentFrame, satelliteNetwork, nullptr, *computeSem);
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices
 		renderer.draw(m_mesh, currentFrame, *fence, *computeSem, model);
 		
 		// 3. Flow Guaranteed: Always advance
-		currentFrame = VulkanCommand::advanceFrame(currentFrame);
+		currentFrame = advanceFrame(currentFrame);
 	}
 	return EXIT_SUCCESS;
 }
