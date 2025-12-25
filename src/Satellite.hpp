@@ -14,15 +14,8 @@ struct SatelliteData
 	alignas(16) float data[4];
 };
 
-struct SatelliteUBO
-{
-	alignas(16) int count;
-	alignas(16) int padding[3]; // Align array start to 16 bytes
-	alignas(16) SatelliteData satellites[MAX_SATELLITES];
-};
-
 // Calculate required size
-constexpr vk::DeviceSize requiredUBOsize = sizeof(SatelliteUBO);
+constexpr vk::DeviceSize requiredUBOsize = sizeof(SatelliteData) * MAX_SATELLITES;
 
 class SatelliteNetwork
 {
@@ -31,7 +24,7 @@ public:
 	// Modify this vector directly, then call upload()
 	std::vector<SatelliteData> satellites;
 
-	explicit SatelliteNetwork(const VulkanDevice& device);
+	explicit SatelliteNetwork(const VulkanDevice& device, uint32_t maxCount = MAX_SATELLITES);
 	~SatelliteNetwork();
 
 	// 2. GPU Sync
@@ -41,7 +34,7 @@ public:
 
 	// 3. Getters for Descriptor Binding
 	inline const vk::raii::Buffer& getBuffer() const { return m_buffer; }
-	inline vk::DeviceSize getSize() const { return requiredUBOsize; }
+	inline vk::DeviceSize getSize() const { return m_bufferSize; }
 
 private:
 	const VulkanDevice& m_device;
@@ -53,5 +46,5 @@ private:
 	// Pointer to mapped GPU memory (Host Visible)
 	void* m_mappedPtr = nullptr;
 
-	void createResources();
+	vk::DeviceSize m_bufferSize;
 };

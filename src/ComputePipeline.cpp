@@ -4,6 +4,7 @@
 
 ComputePipeline::ComputePipeline(const VulkanDevice& device)
 {
+	// 1. Descriptor Set Layout
 	static constexpr std::array<vk::DescriptorSetLayoutBinding, 2> bindings = 
 	{{
 		// Binding 0: Satellites (UBO)
@@ -28,7 +29,25 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 	};
 	m_descriptorSetLayout = vk::raii::DescriptorSetLayout(device.device(), layoutInfo);
 
-	// 1. Load Shader
+	// 2. Push Constant Range
+	// We push 2 uints: satelliteCount, vertexCount
+	static constexpr vk::PushConstantRange pushConstantRange {
+		.stageFlags = vk::ShaderStageFlagBits::eCompute,
+		.offset = 0,
+		.size = 2 * sizeof(uint32_t) 
+	};
+
+	// 3. Pipeline Layout
+	const vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
+		.setLayoutCount = 1,
+		.pSetLayouts = &*m_descriptorSetLayout,
+		.pushConstantRangeCount = 1,
+		.pPushConstantRanges = &pushConstantRange
+	};
+	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
+
+
+	// 4. Load Shader
 	constexpr vk::ShaderModuleCreateInfo shaderInfo {
 		.flags = {},
 		.codeSize = solver::size,
@@ -42,14 +61,7 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 		.pName = "computeMain" // Must match Slang entry point
 	};
 
-	// 2. Pipeline Layout
-	const vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
-		.setLayoutCount = 1,
-		.pSetLayouts = &*m_descriptorSetLayout
-	};
-	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
-
-	// 3. Create Compute Pipeline
+	// 5. Create Compute Pipeline
 	const vk::ComputePipelineCreateInfo pipelineInfo {
 		.stage = shaderStage,
 		.layout = *m_pipelineLayout

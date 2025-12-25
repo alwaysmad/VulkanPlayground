@@ -1,7 +1,5 @@
 #include "VulkanApplication.hpp"
-#include "Mesh.hpp"
-#include "DebugOutput.hpp"
-#include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT
+#include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT and advanceFrame()
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),
@@ -66,7 +64,6 @@ int VulkanApplication::run()
 	vulkanLoader.uploadMesh(m_mesh);
 
 	uint32_t currentFrame = 0;
-
 	// 2. Loop
 	while (!vulkanWindow.shouldClose())
 	{

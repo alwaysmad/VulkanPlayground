@@ -1,27 +1,19 @@
 #include "Satellite.hpp"
-#include "VulkanDevice.hpp"
 
-SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device) 
+SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count) 
 	: m_device(device)
 {
+	// Yell at user if too many satellites
+	if (count > MAX_SATELLITES)
+		{ throw std::runtime_error("Satellite count is higher " + MAX_SATELLITES); }
+	
 	// Pre-allocate vector capacity to avoid reallocations
-	satellites.reserve(MAX_SATELLITES);
+	satellites.reserve(count);
+	m_bufferSize = count * sizeof(SatelliteData);
 
-	createResources();
-	LOG_DEBUG("SatelliteNetwork created");
-}
-
-SatelliteNetwork::~SatelliteNetwork()
-{
-	// RAII handles unmapping and destruction
-	LOG_DEBUG("SatelliteNetwork destroyed");
-}
-
-void SatelliteNetwork::createResources()
-{
 	// Create UBO (Host Visible = CPU can write to it)
 	auto [buf, mem] = m_device.createBuffer(
-			requiredUBOsize,
+			m_bufferSize,
 			vk::BufferUsageFlagBits::eUniformBuffer,
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 	);
@@ -30,23 +22,23 @@ void SatelliteNetwork::createResources()
 
 	// Persistently Map Memory
 	// We keep this pointer open for the lifetime of the object
-	m_mappedPtr = m_memory->mapMemory(0, requiredUBOsize);
+	m_mappedPtr = m_memory->mapMemory(0, m_bufferSize);
+	
+	LOG_DEBUG("SatelliteNetwork created for " << count << " satellites capacity");
+}
+
+SatelliteNetwork::~SatelliteNetwork()
+{
+	// RAII handles unmapping and destruction
+	LOG_DEBUG("SatelliteNetwork destroyed");
 }
 
 void SatelliteNetwork::upload()
 {
-	if (!m_mappedPtr) return;
+	// Ignore safety checks
+	// if (!m_mappedPtr || satellites.empty()) return;
 
-	// Safety: Clamp to MAX_SATELLITES
-	uint32_t count = std::min((uint32_t)satellites.size(), MAX_SATELLITES);
-
-	// Map to the Container Struct layout
-	SatelliteUBO* ubo = static_cast<SatelliteUBO*>(m_mappedPtr);
-
-	// 1. Write Count
-	ubo->count = static_cast<int>(count);
-
-	// 2. Write Data
-	if (count > 0)
-		{ std::memcpy(ubo->satellites, satellites.data(), count * sizeof(SatelliteData)); }
+	// Copy the raw vector data directly to the GPU buffer
+	// We trust the user not to exceed the capacity set in constructor
+	std::memcpy(m_mappedPtr, satellites.data(), satellites.size() * sizeof(SatelliteData));
 }

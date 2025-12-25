@@ -1,5 +1,4 @@
 #include "Computer.hpp"
-#include "DebugOutput.hpp"
 
 Computer::Computer(const VulkanDevice& device) :
 	m_device(device),
@@ -16,7 +15,8 @@ Computer::~Computer() { LOG_DEBUG("Computer destroyed"); }
 void Computer::compute(vk::Fence fence, vk::Semaphore signalSemaphore)
 {
 	// 1. Reset Fence (CPU Sync)
-	m_device.device().resetFences({fence});
+	// Only reset/use fence if one is actually provided (in Headless mode)
+	if (fence) { m_device.device().resetFences({fence}); }
 
 	// 2. Record Commands
 	const auto& cmd = m_command.getBuffer(0); // We only need 1 buffer for compute usually
@@ -30,7 +30,7 @@ void Computer::compute(vk::Fence fence, vk::Semaphore signalSemaphore)
 		.pSignalSemaphores = signalSemaphore ? &signalSemaphore : nullptr
 	};
 
-	// Submit to the COMPUTE Queue
+	// Submit to the compute queue
 	m_device.computeQueue().submit(submitInfo, fence);
 }
 	
@@ -62,8 +62,11 @@ void Computer::createDescriptors()
 
 void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet)
 {
-	std::vector<vk::WriteDescriptorSet> writes;
+	// 1. Update stored counts for Push Constants
+	m_vertexCount = static_cast<uint32_t>(earthMesh.vertices.size());
+	m_satelliteCount = static_cast<uint32_t>(satNet.satellites.size());
 
+	// 2. Update Descriptors
 	// Binding 0: Satellites (UBO)
 	vk::DescriptorBufferInfo uboInfo {
 		.buffer = *satNet.getBuffer(),
@@ -111,13 +114,23 @@ void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd)
 	cmd.bindDescriptorSets(
 			vk::PipelineBindPoint::eCompute,
 			*m_pipeline.getLayout(),
-			0, 
-			{*m_descriptorSets[0]}, 
+			0,
+			{*m_descriptorSets[0]},
 			nullptr
 	);
 
-	// Dispatch (Hardcoded for now)
-	cmd.dispatch(1, 1, 1);
+	// --- PUSH CONSTANTS ---
+	const uint32_t pcData[2] = { m_satelliteCount, m_vertexCount };
+	cmd.pushConstants<uint32_t> (
+			*m_pipeline.getLayout(),
+			vk::ShaderStageFlagBits::eCompute,
+			0,
+			pcData
+	);
+
+	// Dispatch 1 thread per vertex (block size 256)
+	uint32_t groupCount = (m_vertexCount + 255) / 256;
+	cmd.dispatch(groupCount, 1, 1);
 
 	cmd.end();
 }

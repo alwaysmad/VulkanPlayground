@@ -14,7 +14,7 @@ public:
 	// The main function. 
 	// - 'fence': Signaled when compute finishes (CPU Sync)
 	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
-	void compute(vk::Fence fence, vk::Semaphore signalSemaphore = nullptr);
+	void compute(vk::Fence fence, vk::Semaphore signalSemaphore = {});
 
 	// Link the Data (Mesh + Satellites) to the Compute Pipeline
 	void registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet);
@@ -31,6 +31,10 @@ private:
 	// Descriptors
 	vk::raii::DescriptorPool m_descriptorPool = nullptr;
 	vk::raii::DescriptorSets m_descriptorSets = nullptr;
+	
+	// Store these to update push constants
+	uint32_t m_satelliteCount = 0;
+	uint32_t m_vertexCount = 0;
 
 	void createDescriptors();
 	void recordComputeCommands(const vk::raii::CommandBuffer& cmd);

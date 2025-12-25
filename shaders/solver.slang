@@ -17,6 +17,15 @@ struct Satellite
 	float3 padding;
 };
 
+// --- Push Constants ---
+struct PushConstants
+{
+	uint satelliteCount;
+	uint vertexCount;
+};
+[[vk::push_constant]]
+PushConstants pc;
+
 // BINDINGS
 // Binding 0: Satellites (Read-Only Uniforms)
 [[vk::binding(0, 0)]] 

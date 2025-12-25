@@ -7,6 +7,7 @@
 #include "VulkanLoader.hpp"
 #include "Computer.hpp"
 #include "Renderer.hpp"
+#include "Mesh.hpp"
 #include "Satellite.hpp"
 
 class VulkanApplication
