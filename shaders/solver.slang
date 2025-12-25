@@ -13,8 +13,7 @@ struct ComputeVertex
 struct Satellite 
 { 
 	float4x4 viewProj;
-	float intensity;
-	float3 padding;
+	float4 color;
 };
 
 // The Wrapper Struct
@@ -49,40 +48,23 @@ RWStructuredBuffer<ComputeVertex> earthVertices;
 [numthreads(256, 1, 1)]
 void computeMain(uint3 id : SV_DispatchThreadID)
 {
-	return;
 	uint index = id.x;
-
 	if (index >= pc.vertexCount) return;
 
+	// 1. Direct Mapping: Vertex[i] gets Color from Satellite[i]
+	// Safety check in case we have fewer satellites than vertices
+	float4 newColor = float4(1.0, 1.0, 1.0, 1.0); // Default White
+
+	if (index < pc.satelliteCount)
+	{
+		newColor = block.satellites[index].color;
+	}
+
+	// 2. Write to Vertex
 	ComputeVertex v = earthVertices[index];
 
-	// Unpack (Manual SNORM to Float)
-	float3 pos = float3(
-		float(v.rawPos.x) / 32767.0, 
-		float(v.rawPos.y) / 32767.0, 
-		float(v.rawPos.z) / 32767.0
-	);
-	float3 worldPos = pos * 1.0;
-
-	// FIX 4: Visualization Logic (Stripes)
-	// We use assignment (=) instead of addition (+=) to prevent infinite growth
-	float dummyScore = 0.0;
-
-	// Simple test: Use the first satellite's data if available
-	if (pc.satelliteCount > 0)
-	{
-		// Access array via the 'block' wrapper
-		Satellite s = block.satellites[0];
-		if (worldPos.y > 0) dummyScore = s.intensity; 
-	}
-	else
-	{
-		// Fallback pattern if no satellites uploaded yet
-		if (worldPos.y > 0) dummyScore = 1.0;
-	}
-
-	// Write to Red channel
-	v.rawParams.x = float16_t(dummyScore);
+	// Cast float4 -> float16_t4
+	v.rawParams = float16_t4(newColor);
 
 	earthVertices[index] = v;
 }

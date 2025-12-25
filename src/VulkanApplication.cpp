@@ -8,7 +8,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanWindow(vulkanInstance, w, h, appName),
 	vulkanDevice(vulkanInstance, &vulkanWindow.getSurface(), DeviceName),
 	vulkanLoader(vulkanDevice),
-	satelliteNetwork(vulkanDevice), m_mesh(),
+	satelliteNetwork(vulkanDevice, 8), m_mesh(),
 	computer(vulkanDevice),
 	renderer(vulkanDevice, vulkanWindow)
 {
@@ -61,6 +61,17 @@ void VulkanApplication::fillMesh()
 	};
 }
 
+// Helper for Cosine Palette in C++
+// A simple wrapper to keep the main loop clean
+static std::array<float, 4> getCosineColor(float t, float offset)
+{
+	// Simple Rainbow: r, g, b phase shifted
+	float r = 0.5f + 0.5f * std::cos(t + offset);
+	float g = 0.5f + 0.5f * std::cos(t + offset + 2.0f);
+	float b = 0.5f + 0.5f * std::cos(t + offset + 4.0f);
+	return { r, g, b, 1.0f };
+}
+
 int VulkanApplication::run()
 {
 	LOG_DEBUG("VulkanApplication started run()");
@@ -68,6 +79,9 @@ int VulkanApplication::run()
 	// 1. Prepare Data
 	fillMesh();
 	vulkanLoader.uploadMesh(m_mesh);
+	
+	// 3. Register Resources (Link Mesh + Satellites to Computer)
+	computer.registerResources(m_mesh, satelliteNetwork);
 
 	uint32_t currentFrame = 0;
 	// 2. Loop
@@ -76,10 +90,33 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
-		// --- 
+		auto& fence = m_inFlightFences[currentFrame];
+		auto& computeSem = m_computeFinishedSemaphores[currentFrame];
+
+		// Wait for CPU to be ready
+		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)
+			{ throw std::runtime_error("Fence wait failed"); }
+
 		const auto time = vulkanWindow.getTime();
-		const auto cos_time = cos(time);
-		const auto sin_time = sin(time);
+
+		// --- Update Satellite Colors (Cosine) ---
+		for (size_t i = 0; i < satelliteNetwork.satellites.size(); ++i)
+		{
+			// Give each index a different phase offset so they blink differently
+			const float offset = (float)i * 0.8f;
+			const std::array<float, 4> col = getCosineColor(time * 2.0f, offset);
+
+			// Copy to the 'data' field (which maps to 'color' in shader)
+			std::memcpy(satelliteNetwork.satellites[i].data, col.data(), sizeof(col));
+		}
+
+		// Upload new data to UBO
+        	satelliteNetwork.upload();
+
+		// --- 
+		constexpr auto rotSpeed = 0.1f;
+		const auto cos_time = cos(time * rotSpeed);
+		const auto sin_time = sin(time * rotSpeed);
 		
 		const glm::mat4 model = {
 			cos_time,   0.0f,      sin_time, 0.0f,
@@ -88,17 +125,15 @@ int VulkanApplication::run()
 			0.0f,       0.0f,      0.0f,     1.0f };
 		// ---
 
-		auto& fence = m_inFlightFences[currentFrame];
-		
-		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)
-			{ throw std::runtime_error("Fence wait failed"); }
+		// --- STEP 2: Compute Copy ---
+		// Run the compute shader (Copies Satellite Color -> Vertex Color)
+		// Pass nullptr for fence (we don't need CPU wait here)
+		// Signal computeSem for the Graphics Queue
+		computer.compute(nullptr, *computeSem);
 
-		// 1. Compute Step (Future)
-		// ... compute(..., fence) ...
-
-		// 2. Render Step (Optional)
-		// Renderer now guarantees 'fence' is signaled even if it skips drawing.
-		renderer.draw(m_mesh, currentFrame, *fence, {}, model);
+		// --- Render ---
+		// Wait for computeSem before processing vertices
+		renderer.draw(m_mesh, currentFrame, *fence, *computeSem, model);
 		
 		// 3. Flow Guaranteed: Always advance
 		currentFrame = VulkanCommand::advanceFrame(currentFrame);
