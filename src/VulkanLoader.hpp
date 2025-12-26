@@ -17,4 +17,5 @@ private:
 
 	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> 
 	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
+	void downloadMesh(Mesh& mesh);
 };

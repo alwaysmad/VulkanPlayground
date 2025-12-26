@@ -31,9 +31,7 @@ public:
 			if (*m_memory) 
 			{ 
 				allocationCount--; 
-				// Explicitly release the resource to nullptr.
-				// This prevents the old handle from being swapped into 'other'.
-				m_memory = nullptr; 
+				m_memory.clear(); // Releases ownership/destroys the contained handle
 			}
 			// 2. Now safe to move (other.m_memory moves into a null slot)
 			m_memory = std::move(other.m_memory);

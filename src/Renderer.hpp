@@ -83,7 +83,7 @@ private:
 	void recreateSwapchain();
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
-	static constexpr std::array<float, 4> backgroundColor = {0.05f, 0.05f, 0.05f, 1.0f};
+	static constexpr std::array<float, 4> backgroundColor = {0.004f, 0.004f, 0.004f, 1.0f};
 
 	void createDepthBuffer();
 };

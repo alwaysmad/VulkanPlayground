@@ -133,9 +133,9 @@ void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_
 			m_pc
 	);
 
-	// Dispatch 1 thread per vertex (block size 256)
-	uint32_t groupCount = 1;
-	cmd.dispatch(groupCount, 1, 1);
+	// Dispatch 1 thread per vertex
+	uint32_t groupCount = (m_pc.vertexCount + (blockSize - 1)) >> shift;
+	cmd.dispatch(groupCount, 1, 1);	
 
 	cmd.end();
 }

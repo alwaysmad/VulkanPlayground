@@ -27,7 +27,7 @@ VulkanLoader::uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUs
 
 	// 2. GPU Buffer
 	auto [dBuf, dMem] = m_device.createBuffer(size, 
-		vk::BufferUsageFlagBits::eTransferDst | usage, 
+		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc | usage,
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	// 3. Copy
@@ -69,4 +69,48 @@ void VulkanLoader::uploadMesh(Mesh& mesh)
 	mesh.indexMemory = std::move(iMem);
 
 	LOG_DEBUG("Mesh uploaded via Transfer Queue");
+}
+
+void VulkanLoader::downloadMesh(Mesh& mesh)
+{
+	vk::DeviceSize size = sizeof(Vertex) * mesh.vertices.size();
+
+	// 1. Create Staging Buffer (Host Visible, Transfer Destination)
+	auto stagingResult = m_device.createBuffer(size, 
+			vk::BufferUsageFlagBits::eTransferDst, 
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	auto sMem = std::move(stagingResult.second);
+	auto sBuf = std::move(stagingResult.first);
+
+	// 2. Record Copy Command (Device -> Staging)
+	const auto& cmd = m_command.getBuffer(0);
+	cmd.reset();
+	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+	// Note: src is Device Buffer, dst is Staging Buffer
+	vk::BufferCopy region{ .size = size };
+	cmd.copyBuffer(*mesh.vertexBuffer, *sBuf, region);
+
+	// Barrier: Ensure transfer writes are visible to host read
+	vk::MemoryBarrier2 barrier {
+		.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+		.srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+		.dstStageMask = vk::PipelineStageFlagBits2::eHost,
+		.dstAccessMask = vk::AccessFlagBits2::eHostRead
+	};
+	vk::DependencyInfo depInfo { .memoryBarrierCount = 1, .pMemoryBarriers = &barrier };
+	cmd.pipelineBarrier2(depInfo);
+
+	cmd.end();
+
+	// 3. Submit and Wait
+	const vk::SubmitInfo submitInfo{ .commandBufferCount = 1, .pCommandBuffers = &*cmd };
+	m_device.transferQueue().submit(submitInfo, nullptr);
+	m_device.transferQueue().waitIdle();
+
+	// 4. Map and Copy
+	void* mapped = sMem->mapMemory(0, size);
+	std::memcpy(mesh.vertices.data(), mapped, size);
+	sMem->unmapMemory();
 }

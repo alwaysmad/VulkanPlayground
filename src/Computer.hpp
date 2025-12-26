@@ -42,4 +42,9 @@ private:
 	ComputePushConstants m_pc;
 
 	void recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset);
+
+	// Constants for Dispatch
+	// Must match [numthreads(256, 1, 1)] in shader
+	static constexpr uint32_t blockSize = 256u;
+	static constexpr uint32_t shift = 8u;
 };

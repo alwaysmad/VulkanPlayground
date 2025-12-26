@@ -285,14 +285,14 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 		},
 		// Vulkan 1.1 Features
 		{
-			.storageBuffer16BitAccess = vk::True, // <--- Required for SSBO
-			.uniformAndStorageBuffer16BitAccess = vk::True, // <--- Required for UBO
+			.storageBuffer16BitAccess = vk::True, // Required for SSBO
+			.uniformAndStorageBuffer16BitAccess = vk::True, // Required for UBO
 			.storagePushConstant16 = vk::True,
 			.shaderDrawParameters = vk::True
 		},
 		// Vulkan 1.2 Features
 		{
-			.shaderFloat16 = vk::True,         // <--- NEW: Enable 'half' in shaders
+			.shaderFloat16 = vk::True,         // Enable 'half' in shaders
 			// .bufferDeviceAddress = vk::True // (Commonly enabled here too, but optional for now)
 		},
 		// Vulkan 1.3 Features
@@ -351,12 +351,26 @@ std::pair<vk::raii::Buffer, TrackedDeviceMemory> VulkanDevice::createBuffer(
 		vk::BufferUsageFlags usage, 
 		vk::MemoryPropertyFlags properties) const 
 {
-	// 1. Create Buffer
+	// 0. Consider all unique queue families
+	std::set<uint32_t> uniqueQueueFamilies = {
+		graphicsQueueIndex,
+		computeQueueIndex,
+		transferQueueIndex
+	};
+	// Remove "invalid" indices if any (UINT32_MAX)
+	uniqueQueueFamilies.erase(UINT32_MAX);
+	const std::vector<uint32_t> families(uniqueQueueFamilies.begin(), uniqueQueueFamilies.end());
+
 	const vk::BufferCreateInfo bufferInfo {
 		.size = size,
 		.usage = usage,
-		.sharingMode = vk::SharingMode::eExclusive 
+		// If we have more than 1 distinct queue family, use Concurrent
+		.sharingMode = (families.size() > 1) ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive,
+		.queueFamilyIndexCount = static_cast<uint32_t>(families.size()),
+		.pQueueFamilyIndices = families.data()
 	};
+
+	// 1. Create Buffer
 	vk::raii::Buffer buffer(m_device, bufferInfo);
 
 	// 2. Find Memory
