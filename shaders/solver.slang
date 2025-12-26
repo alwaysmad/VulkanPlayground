@@ -26,8 +26,11 @@ struct SatelliteBlock
 // --- Push Constants ---
 struct PushConstants
 {
+	float4x4 modelMatrix; // Transform matrix of the Earth
 	uint vertexCount;
 	uint satelliteCount;
+	float deltaTime;
+	float padding;
 };
 [[vk::push_constant]]
 PushConstants pc;

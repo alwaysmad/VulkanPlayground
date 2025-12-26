@@ -2,7 +2,6 @@
 #include "VulkanDevice.hpp"
 #include "VulkanWindow.hpp"
 #include "DebugOutput.hpp"
-#include "Uniforms.hpp"
 
 Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	m_device(device), 
@@ -309,8 +308,9 @@ void Renderer::recordCommands(
 	cmd.setScissor(0, scissor);
 
 	// --- Push camera and projection matrices ---
-	const CameraPushConstants constants { .viewProj = PackedHalfMat4(m_proj * viewMatrix), .model = modelMatrix};
-	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, constants);
+	m_pc.viewProj = PackedHalfMat4(m_proj * viewMatrix);
+	m_pc.model = modelMatrix; 
+	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc);
 	// -------------------------
 
 	// bind mesh to command and order to draw it	
@@ -335,7 +335,8 @@ void Renderer::recordCommands(
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, 
+			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &postRenderBarrier });
 

@@ -96,6 +96,7 @@ int VulkanApplication::run()
 	computer.registerResources(m_mesh, satelliteNetwork);
 
 	uint32_t currentFrame = 0;
+	constexpr float dt = 0.1;
 	// 3. Loop
 	while (!vulkanWindow.shouldClose())
 	{
@@ -141,7 +142,7 @@ int VulkanApplication::run()
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
-		computer.compute(currentFrame, satelliteNetwork, nullptr, *computeSem);
+		computer.compute(currentFrame, satelliteNetwork, model, dt,  nullptr, *computeSem);
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices

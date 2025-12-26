@@ -4,6 +4,7 @@
 #include "ComputePipeline.hpp"
 #include "Satellite.hpp"
 #include "Mesh.hpp"
+#include "PushConstants.hpp"
 
 class Computer
 {
@@ -15,11 +16,12 @@ public:
 	// - 'fence': Signaled when compute finishes (CPU Sync)
 	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
 	void compute (
-		uint32_t currentFrame,
-		const SatelliteNetwork& satNet,
-		vk::Fence fence, 
-		vk::Semaphore signalSemaphore = {} );
-
+			uint32_t currentFrame,
+			const SatelliteNetwork& satNet,
+			const glm::mat4& modelMatrix,
+			float deltaTime,
+			vk::Fence fence, 
+			vk::Semaphore signalSemaphore = {} );
 	// Link the Data (Mesh + Satellites) to the Compute Pipeline
 	void registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet);
 
@@ -36,8 +38,8 @@ private:
 	vk::raii::DescriptorPool m_descriptorPool = nullptr;
 	vk::raii::DescriptorSets m_descriptorSets = nullptr;
 	
-	// Store these to update push constants
-	uint32_t pcData[2] = {0, 0};
+	// Store push constants
+	ComputePushConstants m_pc;
 
 	void recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset);
 };

@@ -23,3 +23,12 @@ struct CameraPushConstants
 	glm::mat4 model; // (64 bytes)
 	// Total: 96 bytes
 };
+
+struct ComputePushConstants
+{
+	glm::mat4 modelMatrix;   // 64 bytes (To transform main mesh)
+	uint32_t vertexCount;    // 4 bytes
+	uint32_t satelliteCount; // 4 bytes
+	float deltaTime;         // 4 bytes
+	float padding;           // 4 bytes (Align to 80 bytes total)
+};

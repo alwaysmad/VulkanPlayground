@@ -1,11 +1,9 @@
 #include "GraphicsPipeline.hpp"
 #include "VulkanDevice.hpp"
 #include "Mesh.hpp"
-#include "Uniforms.hpp"
+#include "PushConstants.hpp"
 
 #include "triangle.hpp" // The generated header
-
-static constexpr auto  pushConstantSize = sizeof(CameraPushConstants);
 
 GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat)
 {
@@ -92,7 +90,7 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 	static constexpr vk::PushConstantRange pushConstantRange {
 		.stageFlags = vk::ShaderStageFlagBits::eVertex,
 		.offset = 0,
-		.size = pushConstantSize
+		.size = sizeof(CameraPushConstants)
 	};
 	constexpr vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
 		.setLayoutCount = 0,

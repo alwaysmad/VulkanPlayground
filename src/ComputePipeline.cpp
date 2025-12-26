@@ -1,5 +1,6 @@
 #include "ComputePipeline.hpp"
 #include "VulkanDevice.hpp"
+#include "PushConstants.hpp"
 #include "solver.hpp" // Generated from shaders/solver.slang
 
 ComputePipeline::ComputePipeline(const VulkanDevice& device)
@@ -31,11 +32,10 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 	m_descriptorSetLayout = vk::raii::DescriptorSetLayout(device.device(), layoutInfo);
 
 	// 2. Push Constant Range
-	// We push 2 uints: satelliteCount, vertexCount
 	static constexpr vk::PushConstantRange pushConstantRange {
 		.stageFlags = vk::ShaderStageFlagBits::eCompute,
 		.offset = 0,
-		.size = 2 * sizeof(uint32_t) 
+		.size = sizeof(ComputePushConstants) 
 	};
 
 	// 3. Pipeline Layout

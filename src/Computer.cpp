@@ -37,8 +37,8 @@ Computer::~Computer() { LOG_DEBUG("Computer destroyed"); }
 void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet)
 {
 	// 1. Update stored counts for Push Constants
-	pcData[0] = static_cast<uint32_t>(earthMesh.vertices.size());
-	pcData[1] = static_cast<uint32_t>(satNet.satellites.size());
+	m_pc.vertexCount = static_cast<uint32_t>(earthMesh.vertices.size());
+	m_pc.satelliteCount = static_cast<uint32_t>(satNet.satellites.size());
 
 	// 2. Update Descriptors
 	// Binding 0: Satellites (UBO)
@@ -52,8 +52,6 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 	const vk::DescriptorBufferInfo ssboInfo {
 		.buffer = *earthMesh.vertexBuffer,
 		.offset = 0,
-		// Bind ONE frame's worth of size.
-		// The offset determines WHICH frame we see.
 		.range = vk::WholeSize
 	};
 
@@ -80,14 +78,20 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 }
 
 void Computer::compute (
-		uint32_t currentFrame,
-		const SatelliteNetwork& satNet,
-		vk::Fence fence, 
-		vk::Semaphore signalSemaphore )
+			uint32_t currentFrame,
+			const SatelliteNetwork& satNet,
+			const glm::mat4& modelMatrix,
+			float deltaTime,
+			vk::Fence fence, 
+			vk::Semaphore signalSemaphore)
 {
 	// 1. Reset Fence (CPU Sync)
 	// Only reset/use fence if one is actually provided (in Headless mode)
 	if (fence) { m_device.device().resetFences({fence}); }
+
+	// Update push constants
+	m_pc.modelMatrix = modelMatrix;
+	m_pc.deltaTime = deltaTime;
 
 	// 2. Record Commands
 	const auto& cmd = m_command.getBuffer(currentFrame);
@@ -122,15 +126,15 @@ void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_
 	);
 
 	// --- PUSH CONSTANTS ---
-	cmd.pushConstants<uint32_t> (
+	cmd.pushConstants<ComputePushConstants> (
 			*m_pipeline.getLayout(),
 			vk::ShaderStageFlagBits::eCompute,
 			0,
-			pcData
+			m_pc
 	);
 
 	// Dispatch 1 thread per vertex (block size 256)
-	uint32_t groupCount = (pcData[0] + 255) / 256;
+	uint32_t groupCount = 1;
 	cmd.dispatch(groupCount, 1, 1);
 
 	cmd.end();

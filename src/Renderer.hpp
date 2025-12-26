@@ -3,6 +3,7 @@
 #include "GraphicsPipeline.hpp"
 #include "VulkanCommand.hpp" 
 #include "Mesh.hpp"
+#include "PushConstants.hpp"
 
 class VulkanDevice;
 class VulkanWindow;
@@ -33,7 +34,6 @@ public:
 			const glm::mat4& viewMatrix = defaultView );
 
 private:
-
 	static constexpr glm::mat4 defaultModel = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
@@ -53,8 +53,10 @@ private:
 		0.0f,       0.0f,      -3.354102f,  1.0f  // Col 3 (Translation)
 	};
 
-	glm::mat4 m_proj; 
+	// Push constant members and logic
+	glm::mat4 m_proj;
 	void updateProjectionMatrix();
+	CameraPushConstants m_pc; 
 
 	const VulkanDevice& m_device;
 
