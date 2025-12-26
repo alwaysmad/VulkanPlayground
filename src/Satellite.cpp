@@ -17,7 +17,7 @@ SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count)
 	m_frameSize = (requiredUBOsize + align - 1) & ~(align - 1); // Align up
 
 	// 2. Allocate Total Size
-	vk::DeviceSize totalSize = m_frameSize * MAX_FRAMES_IN_FLIGHT;
+	const vk::DeviceSize totalSize = m_frameSize * MAX_FRAMES_IN_FLIGHT;
 
 	// Create UBO (Host Visible = CPU can write to it)
 	auto [buf, mem] = m_device.createBuffer(
@@ -30,7 +30,7 @@ SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count)
 
 	// Persistently Map Memory
 	// We keep this pointer open for the lifetime of the object
-	m_mappedPtr = m_memory->mapMemory(0, requiredUBOsize);
+	m_mappedPtr = m_memory->mapMemory(0, vk::WholeSize);
 	
 	LOG_DEBUG("SatelliteNetwork created for " << count << " satellites capacity");
 }

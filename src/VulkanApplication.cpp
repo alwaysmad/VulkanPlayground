@@ -123,12 +123,12 @@ int VulkanApplication::run()
 		}
 
 		// Upload new data to UBO
-        	//satelliteNetwork.upload(currentFrame);
+        	satelliteNetwork.upload(currentFrame);
 
 		// --- 
 		constexpr auto rotSpeed = 0.05f;
-		const auto cos_time = 1; //std::cos(time * rotSpeed);
-		const auto sin_time = 0; //std::sin(time * rotSpeed);
+		const auto cos_time = std::cos(time * rotSpeed);
+		const auto sin_time = std::sin(time * rotSpeed);
 		
 		const glm::mat4 model = {
 			cos_time,   0.0f,      sin_time, 0.0f,
