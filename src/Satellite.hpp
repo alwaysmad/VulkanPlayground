@@ -34,6 +34,7 @@ public:
 	// Safe to call every frame.
 	inline void upload(uint32_t currentFrame)
 	{
+		assert(satellites.size() <= MAX_SATELLITES && "Satellite overflow!");
 		// Calculate where to write for THIS frame
 		const size_t offset = currentFrame * m_frameSize;
 		char* dst = static_cast<char*>(m_mappedPtr) + offset;

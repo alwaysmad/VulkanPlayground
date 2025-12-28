@@ -1,11 +1,13 @@
 #pragma once
 
-struct Vertex
+struct alignas(16) Vertex
 {
-	// 1. Position + Var1 (Packed into 4x 16-bit SNORM) -> 8 bytes
+	// 1. x, y, z, phi 
+	// Packed into 4x 16-bit SNORM -> 8 bytes
 	int16_t posVar1[4];
 
-	// 2. Params + Var2 (Packed into 4x 16-bit SFLOAT) -> 8 bytes
+	// 2. a, V, SW, Omega
+	// Packed into 4x 16-bit SFLOAT -> 8 bytes
 	uint16_t paramsVar2[4];
 
 	// --- Constructors ---
@@ -36,7 +38,7 @@ public:
 	}};
 
 	// 1. CPU Data
-	alignas(16) std::vector<Vertex> vertices;
+	std::vector<Vertex> vertices;
 	alignas(16) std::vector<uint32_t> indices;
 
 	// 2. GPU Data
