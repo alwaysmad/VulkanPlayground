@@ -78,12 +78,12 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 }
 
 void Computer::compute (
-			uint32_t currentFrame,
-			const SatelliteNetwork& satNet,
-			const glm::mat4& modelMatrix,
-			float deltaTime,
-			vk::Fence fence, 
-			vk::Semaphore signalSemaphore)
+		uint32_t currentFrame,
+		const glm::mat4& modelMatrix,
+		float deltaTime,
+		vk::Fence fence, 
+		vk::Semaphore waitSemaphore, 
+		vk::Semaphore signalSemaphore )
 {
 	// 1. Reset Fence (CPU Sync)
 	// Only reset/use fence if one is actually provided (in Headless mode)
@@ -95,10 +95,15 @@ void Computer::compute (
 
 	// 2. Record Commands
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordComputeCommands(cmd, currentFrame * satNet.getFrameSize() );
+	recordComputeCommands(cmd, 0);
 
 	// 3. Submit
+	constexpr vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eComputeShader;
+	
 	const vk::SubmitInfo submitInfo {
+		.waitSemaphoreCount = waitSemaphore ? 1u : 0u,
+		.pWaitSemaphores = waitSemaphore ? &waitSemaphore : nullptr,
+		.pWaitDstStageMask = waitSemaphore ? &waitStage : nullptr, // Wait at Compute Stage
 		.commandBufferCount = 1,
 		.pCommandBuffers = &*cmd,
 		.signalSemaphoreCount = signalSemaphore ? 1u : 0u,

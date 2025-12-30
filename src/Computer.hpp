@@ -17,10 +17,10 @@ public:
 	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
 	void compute (
 			uint32_t currentFrame,
-			const SatelliteNetwork& satNet,
 			const glm::mat4& modelMatrix,
 			float deltaTime,
 			vk::Fence fence, 
+			vk::Semaphore waitSemaphore,
 			vk::Semaphore signalSemaphore = {} );
 	// Link the Data (Mesh + Satellites) to the Compute Pipeline
 	void registerResources(const Mesh& earthMesh, const SatelliteNetwork& satNet);

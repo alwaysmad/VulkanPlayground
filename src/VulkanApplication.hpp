@@ -29,6 +29,7 @@ private:
 	// Orchestration Sync (Owned by App)
 	std::vector<vk::raii::Fence> m_inFlightFences; 
 	std::vector<vk::raii::Semaphore> m_computeFinishedSemaphores;
+	std::vector<vk::raii::Semaphore> m_uploadFinishedSemaphores;
 	
 	// Mesh and helpers
 	void fillMesh();

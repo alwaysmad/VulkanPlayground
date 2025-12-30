@@ -1,4 +1,5 @@
 #include "Satellite.hpp"
+#include "VulkanLoader.hpp"
 
 SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count) 
 	: m_device(device)
@@ -31,34 +32,62 @@ SatelliteNetwork::SatelliteNetwork(const VulkanDevice& device, uint32_t count)
 
 	// Pre-allocate vector capacity to avoid reallocations
 	satellites.reserve(count);
-	satellites.resize(count);
+	satellites.resize(count); // tmp, will remove later
 
-	// 1. Calculate Aligned Size
-	// Uniform Buffer offsets must be aligned to minUniformBufferOffsetAlignment (usually 256 bytes)
+	// 0. Uniform Buffer offsets must be aligned to minUniformBufferOffsetAlignment (usually 256 bytes)
 	const auto align = m_device.physicalDevice().getProperties().limits.minUniformBufferOffsetAlignment;
 	m_frameSize = (requiredUBOsize + align - 1) & ~(align - 1); // Align up
 
-	// 2. Allocate Total Size
-	const vk::DeviceSize totalSize = m_frameSize * MAX_FRAMES_IN_FLIGHT;
-
-	// Create UBO (Host Visible = CPU can write to it)
-	auto [buf, mem] = m_device.createBuffer(
-			totalSize,
-			vk::BufferUsageFlagBits::eUniformBuffer,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+	// 1. Create Staging Ring Buffer (Size * Frames)
+	const vk::DeviceSize stagingSize = m_frameSize * MAX_FRAMES_IN_FLIGHT;
+	auto [sBuf, sMem] = m_device.createBuffer(
+		stagingSize,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 	);
-	m_buffer = std::move(buf);
-	m_memory = std::move(mem);
+	m_stagingBuffer = std::move(sBuf);
+	m_stagingMemory = std::move(sMem);
+	m_mappedPtr = m_stagingMemory->mapMemory(0, vk::WholeSize);
 
-	// Persistently Map Memory
-	// We keep this pointer open for the lifetime of the object
-	m_mappedPtr = m_memory->mapMemory(0, vk::WholeSize);
+	// 2. Create GPU Buffer (Single Frame Size)
+	// Must be eDeviceLocal for performance
+	auto [dBuf, dMem] = m_device.createBuffer(
+		m_frameSize, // Only 1 frame worth of space
+		vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst,
+		vk::MemoryPropertyFlagBits::eDeviceLocal
+	);
+	m_deviceBuffer = std::move(dBuf);
+	m_deviceMemory = std::move(dMem);
 	
-	LOG_DEBUG("SatelliteNetwork created for " << count << " satellites capacity");
+	LOG_DEBUG("SatelliteNetwork: Staging Ring + Device Local Buffer created");
 }
 
 SatelliteNetwork::~SatelliteNetwork()
 {
 	// RAII handles unmapping and destruction
 	LOG_DEBUG("SatelliteNetwork destroyed");
+}
+
+void SatelliteNetwork::upload(uint32_t currentFrame, VulkanLoader& loader, vk::Semaphore signalSemaphore)
+{
+	// 1. CPU Write to Staging Ring
+	// We use the 'currentFrame' slot in the staging buffer
+	const size_t stagingOffset = currentFrame * m_frameSize;
+
+	// Safety clamp
+	size_t count = std::min(static_cast<uint32_t>(satellites.size()), MAX_SATELLITES);
+
+	// 2. Copy to staging buffer
+	char* dst = static_cast<char*>(m_mappedPtr) + stagingOffset;
+	std::memcpy(dst, satellites.data(), count * sizeof(SatelliteData));
+
+	// 3. Request Async Upload
+	// Src: Staging[Frame] -> Dst: Device[0] (Always offset 0)
+	loader.uploadAsync(
+		currentFrame,
+		m_stagingBuffer, stagingOffset,
+		m_deviceBuffer, 0,
+		m_frameSize,
+		signalSemaphore
+	);
 }

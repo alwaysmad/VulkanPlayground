@@ -21,7 +21,10 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	// Create Semaphores
 	constexpr vk::SemaphoreCreateInfo semInfo{};
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-		{ m_computeFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo); }
+	{
+		m_computeFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo);
+		m_uploadFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo);
+	}
 
 	LOG_DEBUG("VulkanApplication instance created");
 }
@@ -40,28 +43,16 @@ void VulkanApplication::fillMesh()
 	// Position (x,y,z,w) | Color (r,g,b,a)
 	m_mesh.vertices = {
 		// Front Face (Z = -0.5)
-		// Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
-		// Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
-		// Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
-		// Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
-		// Back Face (Z = +0.5)
-		// Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
-		// Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
-		// Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: white
-		// Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f})  // 7: cyan
-		//
-		// Front Face (Z = -0.5)
 		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 1: red
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 2: yellow
-		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 3: green
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
+		 Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
 		// Back Face (Z = +0.5)
-		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 4: blue
-		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 5: magenta
-		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 6: white
-		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f})  // 7: cyan
+		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
+		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
+		Vertex(std::array<float, 8>{ 0.5f,  0.5f,  0.5f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f}), // 6: white
+		Vertex(std::array<float, 8>{-0.5f,  0.5f,  0.5f, 1.0f,  0.0f, 1.0f, 1.0f, 1.0f})  // 7: cyan
 	};
-
 	m_mesh.indices = {
 		0, 1, 2, 2, 3, 0, // Front
 		1, 5, 6, 6, 2, 1, // Right
@@ -103,8 +94,9 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
-		auto& fence = m_inFlightFences[currentFrame];
+		auto& uploadSem = m_uploadFinishedSemaphores[currentFrame];
 		auto& computeSem = m_computeFinishedSemaphores[currentFrame];
+		auto& fence = m_inFlightFences[currentFrame];
 
 		// Wait for CPU to be ready
 		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)
@@ -124,7 +116,7 @@ int VulkanApplication::run()
 		}
 
 		// Upload new data to UBO
-        	satelliteNetwork.upload(currentFrame);
+		satelliteNetwork.upload(currentFrame, vulkanLoader, *uploadSem);
 
 		// --- 
 		constexpr auto rotSpeed = 0.05f;
@@ -142,7 +134,7 @@ int VulkanApplication::run()
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
-		computer.compute(currentFrame, satelliteNetwork, model, dt,  nullptr, *computeSem);
+		computer.compute(currentFrame, model, dt,  nullptr, *uploadSem, *computeSem);
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices
