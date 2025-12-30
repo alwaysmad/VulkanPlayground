@@ -114,3 +114,60 @@ void VulkanLoader::downloadMesh(Mesh& mesh)
 	std::memcpy(mesh.vertices.data(), mapped, size);
 	sMem->unmapMemory();
 }
+
+void VulkanLoader::uploadAsync(
+		uint32_t currentFrame,
+		const vk::raii::Buffer& src, vk::DeviceSize srcOffset,
+		const vk::raii::Buffer& dst, vk::DeviceSize dstOffset,
+		vk::DeviceSize size,
+		vk::Semaphore signalSemaphore)
+{
+	// 1. Get a Command Buffer for this frame
+	const auto& cmd = m_command.getBuffer(currentFrame);
+
+	cmd.reset();
+	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+	// 2. Record Copy
+	const vk::BufferCopy region {
+		.srcOffset = srcOffset,
+		.dstOffset = dstOffset,
+		.size = size
+	};
+	cmd.copyBuffer(*src, *dst, region);
+
+	// 3. Barrier: Ensure transfer write is available/visible
+	// (Though Semaphores handle execution dependency, a barrier is good practice
+	// to flush caches before the semaphore signals).
+	const vk::BufferMemoryBarrier2 barrier {
+		.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+		.srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+		// We release to Compute Shader
+		.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
+		.dstAccessMask = vk::AccessFlagBits2::eUniformRead,
+		.srcQueueFamilyIndex = vk::QueueFamilyIgnored, // Concurrent sharing used
+		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+		.buffer = *dst,
+		.offset = dstOffset,
+		.size = size
+	};
+
+	const vk::DependencyInfo depInfo {
+		.bufferMemoryBarrierCount = 1,
+		.pBufferMemoryBarriers = &barrier
+	};
+	cmd.pipelineBarrier2(depInfo);
+
+	cmd.end();
+
+	// 4. Submit with Signal
+	const vk::SubmitInfo submitInfo {
+		.commandBufferCount = 1,
+		.pCommandBuffers = &*cmd,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = &signalSemaphore
+	};
+
+	// Submit, no waitIdle here.
+	m_device.transferQueue().submit(submitInfo, nullptr);
+}
