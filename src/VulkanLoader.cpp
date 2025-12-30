@@ -86,7 +86,9 @@ void VulkanLoader::uploadAsync(
 		const vk::raii::Buffer& src, vk::DeviceSize srcOffset,
 		const vk::raii::Buffer& dst, vk::DeviceSize dstOffset,
 		vk::DeviceSize size,
-		vk::Semaphore signalSemaphore)
+		vk::Semaphore signalSemaphore,
+    		vk::PipelineStageFlags2 dstStage,
+		vk::AccessFlags2 dstAccess )
 {
 	// 1. Get a Command Buffer for this frame
 	const auto& cmd = m_command.getBuffer(currentFrame);
@@ -108,9 +110,8 @@ void VulkanLoader::uploadAsync(
 	const vk::BufferMemoryBarrier2 barrier {
 		.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
 		.srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
-		// We release to Compute Shader
-		.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader,
-		.dstAccessMask = vk::AccessFlagBits2::eUniformRead,
+		.dstStageMask = dstStage,
+		.dstAccessMask = dstAccess,	
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored, // Concurrent sharing used
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.buffer = *dst,

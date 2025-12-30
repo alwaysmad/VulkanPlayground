@@ -1,4 +1,5 @@
 // src/VulkanInstance.cpp
+#include <filesystem>
 #include "VulkanInstance.hpp"
 
 static constexpr const char* engineName = "SimpleVK";
@@ -12,9 +13,19 @@ VulkanInstance::VulkanInstance(const std::string& appName, const std::vector<con
 {
 	if constexpr (enableValidationLayers)
 	{
-		const std::string path = "/tmp/" + appName + ".log";
-		logFile.open(path);
-		LOG_DEBUG("Outputting additional logs to " << path);
+		// Cross-platform temporary directory
+		// e.g., Linux: /tmp/SimpleVK.log
+		// e.g., Windows: C:\Users\User\AppData\Local\Temp\SimpleVK.log
+		try {
+			const auto tempDir = std::filesystem::temp_directory_path();
+			const auto logPath = tempDir / (appName + ".log");
+
+			logFile.open(logPath);
+			LOG_DEBUG("Outputting additional logs to " << logPath.string());
+		}
+		catch (const std::filesystem::filesystem_error& e) {
+			std::cerr << DBG_COLOR_YELLOW << "[WARNING] Failed to open log file: " << e.what() << DBG_COLOR_RESET << std::endl;
+		}
 	}
 
 	const vk::ApplicationInfo appInfo {

@@ -34,7 +34,7 @@ void Mesh::upload(VulkanLoader& loader)
 	auto [iBuf, iMem] = loader.createBuffer(
 		indices.data(), 
 		sizeof(uint32_t) * indices.size(), 
-		vk::BufferUsageFlagBits::eIndexBuffer
+		vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eStorageBuffer
 	);
 	indexBuffer = std::move(iBuf);
 	indexMemory = std::move(iMem);
