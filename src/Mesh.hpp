@@ -44,8 +44,8 @@ public:
 	void download(VulkanLoader& loader);
 
 	// Getters for binding
-	const inline vk::raii::Buffer& getVertexBuffer() { return vertexBuffer; }
-	const inline vk::raii::Buffer& getIndexBuffer() { return indexBuffer; }
+	const inline vk::raii::Buffer& getVertexBuffer() const { return vertexBuffer; }
+	const inline vk::raii::Buffer& getIndexBuffer() const { return indexBuffer; }
 private:
 	// 2. GPU Data
 	// Declare Memory BEFORE Buffer.
