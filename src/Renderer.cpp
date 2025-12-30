@@ -314,8 +314,8 @@ void Renderer::recordCommands(
 	// -------------------------
 
 	// bind mesh to command and order to draw it	
-	cmd.bindVertexBuffers(0, {*mesh.vertexBuffer}, {0});
-	cmd.bindIndexBuffer(*mesh.indexBuffer, 0, vk::IndexType::eUint32);
+	cmd.bindVertexBuffers(0, {*mesh.getVertexBuffer()}, {0});
+	cmd.bindIndexBuffer(*mesh.getIndexBuffer(), 0, vk::IndexType::eUint32);
 	cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0);
 
 	cmd.endRendering();

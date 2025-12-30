@@ -9,7 +9,7 @@ Computer::Computer(const VulkanDevice& device) :
 	// 1. Create Pool
 	static constexpr std::array<vk::DescriptorPoolSize, 2> poolSizes =
 	{{
-		{ vk::DescriptorType::eUniformBufferDynamic, 1 },
+		{ vk::DescriptorType::eUniformBuffer, 1 },
 		{ vk::DescriptorType::eStorageBuffer, 1 }
 	}};
 
@@ -50,7 +50,7 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 
 	// Binding 1: Earth (SSBO)
 	const vk::DescriptorBufferInfo ssboInfo {
-		.buffer = *earthMesh.vertexBuffer,
+		.buffer = *earthMesh.getVertexBuffer(),
 		.offset = 0,
 		.range = vk::WholeSize
 	};
@@ -61,7 +61,7 @@ void Computer::registerResources(const Mesh& earthMesh, const SatelliteNetwork& 
 			.dstSet = *m_descriptorSets[0],
 			.dstBinding = 0,
 			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBufferDynamic,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
 			.pBufferInfo = &uboInfo
 		},
 		{
@@ -95,7 +95,7 @@ void Computer::compute (
 
 	// 2. Record Commands
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordComputeCommands(cmd, 0);
+	recordComputeCommands(cmd);
 
 	// 3. Submit
 	constexpr vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eComputeShader;
@@ -114,7 +114,7 @@ void Computer::compute (
 	m_device.computeQueue().submit(submitInfo, fence);
 }
 
-void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset)
+void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd)
 {
 	cmd.reset();
 	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
@@ -127,7 +127,7 @@ void Computer::recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_
 			*m_pipeline.getLayout(),
 			0,
 			{*m_descriptorSets[0]},
-			{ dynamicOffset } // Pass the offset here
+			nullptr
 	);
 
 	// --- PUSH CONSTANTS ---

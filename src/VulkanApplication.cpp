@@ -80,7 +80,8 @@ int VulkanApplication::run()
 
 	// 1. Prepare Data
 	fillMesh();
-	vulkanLoader.uploadMesh(m_mesh);
+	m_mesh.upload(vulkanLoader);
+	
 	satelliteNetwork.satellites.resize(8);
 	
 	// 2. Register Resources (Link Mesh + Satellites to Computer)

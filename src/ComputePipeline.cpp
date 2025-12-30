@@ -11,8 +11,7 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 		// Binding 0: Satellites (UBO)
 		{
 			.binding = 0,
-			// Dynamic Uniform Buffer allows changing offsets at draw time
-			.descriptorType = vk::DescriptorType::eUniformBufferDynamic,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
 			.descriptorCount = 1,
 			.stageFlags = vk::ShaderStageFlagBits::eCompute
 		},

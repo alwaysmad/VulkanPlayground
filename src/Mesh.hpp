@@ -1,4 +1,7 @@
 #pragma once
+#include "VulkanDevice.hpp"
+
+class VulkanLoader;
 
 struct alignas(16) Vertex
 {
@@ -12,15 +15,7 @@ struct alignas(16) Vertex
 
 	// --- Constructors ---
 	Vertex() = default;
-
-	explicit Vertex(const std::array<float, 8>& data) : 
-		posVar1{ packSnorm(data[0]), packSnorm(data[1]), packSnorm(data[2]), packSnorm(data[3]) },
-		paramsVar2{ glm::packHalf1x16(data[4]), glm::packHalf1x16(data[5]), glm::packHalf1x16(data[6]), glm::packHalf1x16(data[7]) }
-	{}
-
-private:
-	static inline int16_t packSnorm(float f)
-		{ return static_cast<int16_t>(std::round(std::clamp(f, -1.0f, 1.0f) * 32767.0f)); }
+	explicit Vertex(const std::array<float, 8>& data);
 };
 
 class Mesh
@@ -41,6 +36,17 @@ public:
 	std::vector<Vertex> vertices;
 	alignas(16) std::vector<uint32_t> indices;
 
+	explicit Mesh();
+	~Mesh();
+
+	// Self-Upload/Download
+	void upload(VulkanLoader& loader);
+	void download(VulkanLoader& loader);
+
+	// Getters for binding
+	const inline vk::raii::Buffer& getVertexBuffer() { return vertexBuffer; }
+	const inline vk::raii::Buffer& getIndexBuffer() { return indexBuffer; }
+private:
 	// 2. GPU Data
 	// Declare Memory BEFORE Buffer.
 	// Destruction happens in reverse order:
@@ -49,7 +55,4 @@ public:
 
 	TrackedDeviceMemory indexMemory;
 	vk::raii::Buffer indexBuffer = nullptr;
-
-	explicit Mesh() { LOG_DEBUG("Mesh created"); }
-	~Mesh() { LOG_DEBUG("Mesh destroyed"); }
 };

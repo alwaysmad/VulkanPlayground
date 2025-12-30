@@ -41,7 +41,7 @@ private:
 	// Store push constants
 	ComputePushConstants m_pc;
 
-	void recordComputeCommands(const vk::raii::CommandBuffer& cmd, uint32_t dynamicOffset);
+	void recordComputeCommands(const vk::raii::CommandBuffer& cmd);
 
 	// Constants for Dispatch
 	// Must match [numthreads(256, 1, 1)] in shader

@@ -1,8 +1,6 @@
 #pragma once
 #include "VulkanDevice.hpp"
 #include "VulkanCommand.hpp"
-#include "Mesh.hpp"
-#include "Satellite.hpp"
 
 class VulkanLoader
 {
@@ -10,11 +8,17 @@ public:
 	explicit VulkanLoader(const VulkanDevice& device);
 	~VulkanLoader();
 
-	// Synchronous mesh upload and download (keeps waiting until idle)
-	void uploadMesh(Mesh& mesh);
-	void downloadMesh(Mesh& mesh);
+	// 1. GENERIC SYNC UPLOAD (Create + Upload)
+	// Creates a DeviceLocal buffer and fills it with 'data'.
+	// Usage automatically includes TransferDst | TransferSrc.
+	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> 
+	createBuffer(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 
-	// Async upload for per-frame data
+	// 2. GENERIC SYNC DOWNLOAD (Download)
+	// Reads 'src' buffer back to CPU 'dst' pointer.
+	void downloadBuffer(const vk::raii::Buffer& src, void* dst, vk::DeviceSize size);
+
+	// 3. ASYNC UPLOAD (Staging -> Device)
 	// Records copy from src -> dst
 	// Submits to Transfer Queue
 	// Signals 'signalSemaphore' when done
@@ -28,7 +32,4 @@ public:
 private:
 	const VulkanDevice& m_device;
 	VulkanCommand m_command; 
-
-	[[nodiscard]] std::pair<vk::raii::Buffer, TrackedDeviceMemory> 
-	uploadToDevice(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 };
