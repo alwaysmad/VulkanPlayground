@@ -7,7 +7,8 @@ constexpr uint32_t MAX_SATELLITES = 512;
 struct alignas(16) SatelliteData
 {
 	// 1. Matrix (64 bytes)
-	glm::mat4 viewProj; 
+	// View matrix + camera parameters: tanHalfFov, aspect, zNear, zFar 
+	glm::mat4 camera;
 
 	// 2. Intensity/Data (16 bytes)
 	float data[4];
@@ -32,7 +33,7 @@ public:
 
 	// 2. GPU Sync
 	// Copies the current 'satellites' vector to the UBO.
-	void upload(uint32_t currentFrame, VulkanLoader& loader, vk::Semaphore signalSemaphore );
+	void upload(uint32_t currentFrame, VulkanLoader& loader, vk::Semaphore signalSemaphore);
 	
 	// 3. Getters for Descriptor Binding
 	inline const vk::raii::Buffer& getBuffer() const { return m_deviceBuffer; }

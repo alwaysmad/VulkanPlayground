@@ -26,12 +26,12 @@ public:
 	//     If provided (not null), the Graphics Queue will wait for this semaphore 
 	//     (at Vertex Input stage) before processing. Used to sync Compute -> Graphics.
 	void draw(
-			const Mesh& mesh,
-			uint32_t currentFrame,
-			vk::Fence fence,
-			vk::Semaphore waitSemaphore = {},
-			const glm::mat4& ModelMatrix = defaultModel,
-			const glm::mat4& viewMatrix = defaultView );
+		const Mesh& mesh,
+		uint32_t currentFrame,
+		vk::Fence fence,
+		vk::Semaphore waitSemaphore = {},
+		const glm::mat4& ModelMatrix = defaultModel,
+		const glm::mat4& viewMatrix = defaultView );
 
 private:
 	static constexpr glm::mat4 defaultModel = {

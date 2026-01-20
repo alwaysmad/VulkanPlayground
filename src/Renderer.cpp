@@ -115,11 +115,11 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 void Renderer::updateProjectionMatrix()
 {
 	const auto extent = m_swapchain.getExtent();
-	const auto aspect = (float)extent.width / (float)extent.height;
+	const auto min = static_cast<float>( std::min(extent.width, extent.height) );
 
 	// MANUAL PROJECTION MATRIX CONSTRUCTION
 	// FOV: 45 degrees
-	// Near: 0.1f
+	// Near: 1.0f
 	// Far: Infinity
 	// Z-Range: [0, 1] (Standard Vulkan)
 	
@@ -128,25 +128,16 @@ void Renderer::updateProjectionMatrix()
 	constexpr float f = 2.41421356f;
 	constexpr float near = 1.0f;
 
-	m_proj = glm::mat4(0.0f);
+	constexpr glm::mat4 hardcodedProj = {
+		f,	  0.0f,	0.0f,	0.0f,	// Col 0 (Right)
+		0.0f,	  -f,	0.0f,	0.0f,	// Col 1 (Up-ish)
+		0.0f,	  0.0f,	-1.0f,	-1.0f,	// Col 2 (Forward-ish)
+		0.0f,     0.0f,	-near,	0.0f	// Col 3 (Translation)
+	};
 
-	// [0][0] Scale X
-	m_proj[0][0] = f / aspect;
-
-	// [1][1] Scale Y (Negative for Vulkan Y-Flip)
-	m_proj[1][1] = -f;
-
-	// [2][2] Z-Coeff (Standard Z: 0 at Near, 1 at Far)
-	// Formula: z_ndc = -1 + (near / z_view)
-	// Since w_clip = -z_view, this requires A = -1.
-	m_proj[2][2] = -1.0f; 
-
-	// [3][2] Translation Z (The 'B' term)
-	// B = -near
-	m_proj[3][2] = -near;
-
-	// [2][3] Perspective Division (Sets w_clip = -z_view)
-	m_proj[2][3] = -1.0f;
+	m_proj = hardcodedProj;
+	m_proj[0][0] *= min / static_cast<float>(extent.width);
+	m_proj[1][1] *= min / static_cast<float>(extent.height);
 }
 
 void Renderer::draw(
