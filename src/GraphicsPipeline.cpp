@@ -3,15 +3,15 @@
 #include "Mesh.hpp"
 #include "PushConstants.hpp"
 
-#include "triangle.hpp" // The generated header
+#include "mesh.hpp" // The generated header
 
 GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat)
 {
 	// 1. Load Shaders
 	constexpr vk::ShaderModuleCreateInfo smci {
 		.flags = {},
-		.codeSize = triangle::size,
-		.pCode = triangle::code
+		.codeSize = mesh::size,
+		.pCode = mesh::code
 	};
 	const vk::raii::ShaderModule shaderModule = vk::raii::ShaderModule(device.device(), smci);
 	// 2. Shader Stages

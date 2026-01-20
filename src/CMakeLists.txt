@@ -74,19 +74,26 @@ target_precompile_headers(simplevk PRIVATE
 )
 
 # 7. Shaders
-# 7.1. Compile Triangle (Graphics)
+# 7.1. Compile Mesh (Graphics)
 add_slang_shader_target(
-	CompileTriangle
-	SOURCES ${CMAKE_SOURCE_DIR}/shaders/triangle.slang
+	CompileMesh
+	SOURCES ${CMAKE_SOURCE_DIR}/shaders/mesh.slang
 	ENTRIES vertMain fragMain
 )
 
-# 7.2. Compile Solver (Compute)
+# 7.2 Compile Satellite (New)
+add_slang_shader_target(
+	CompileSatellite
+	SOURCES ${CMAKE_SOURCE_DIR}/shaders/satellite.slang
+	ENTRIES vertMain fragMain
+)
+
+# 7.3. Compile Solver (Compute)
 add_slang_shader_target(
 	CompileSolver
 	SOURCES ${CMAKE_SOURCE_DIR}/shaders/solver.slang
 	ENTRIES computeMain
 )
 
-# 7.3. Add dependencies so they build before the executable
-add_dependencies(simplevk CompileTriangle CompileSolver)
+# 8. Add dependencies so they build before the executable
+add_dependencies(simplevk CompileMesh CompileSatellite CompileSolver)
