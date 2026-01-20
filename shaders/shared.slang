@@ -55,6 +55,7 @@ float4x4 getInvViewProj(float4x4 camera)
 	float f = camera[3].w; // z-Far
 	
 	// Construct inverse view matrix
+	// Transpose Rotation + Dot Product Translation
 	float4x4 iView = float4x4(
 		camera[0].xyz, -dot(camera[0].xyz, camera[3].xyz),
 		camera[1].xyz, -dot(camera[1].xyz, camera[3].xyz),
@@ -67,7 +68,7 @@ float4x4 getInvViewProj(float4x4 camera)
 		(a*t),	0.0,	0.0,		0.0,
 		0.0,	-t,	0.0,		0.0,
 		0.0,	0.0,	0.0,		-1.0,
-		0.0,	0.0,	1/f - 1/n,	1/n
+		0.0,	0.0,	1.0/f - 1.0/n,	1.0/n
 	);
 
 	return mul(iView, iView);	
