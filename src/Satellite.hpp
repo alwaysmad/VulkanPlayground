@@ -8,6 +8,10 @@ struct alignas(16) SatelliteData
 {
 	// 1. Matrix (64 bytes)
 	// View matrix + camera parameters: tanHalfFov, aspect, zNear, zFar 
+	// [0][3] = tanHalfFov
+	// [1][3] = aspect
+	// [2][3] = zNear
+	// [3][3] = zFar
 	glm::mat4 camera;
 
 	// 2. Intensity/Data (16 bytes)

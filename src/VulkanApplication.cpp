@@ -46,7 +46,7 @@ void VulkanApplication::fillMesh()
 		Vertex(std::array<float, 8>{-0.5f, -0.5f, -0.5f, 1.0f,  0.0f, 0.0f, 0.0f, 1.0f}), // 0: black
 		Vertex(std::array<float, 8>{ 0.5f, -0.5f, -0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f}), // 1: red
 		Vertex(std::array<float, 8>{ 0.5f,  0.5f, -0.5f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f}), // 2: yellow
-		 Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
+		Vertex(std::array<float, 8>{-0.5f,  0.5f, -0.5f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f}), // 3: green
 		// Back Face (Z = +0.5)
 		Vertex(std::array<float, 8>{-0.5f, -0.5f,  0.5f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f}), // 4: blue
 		Vertex(std::array<float, 8>{ 0.5f, -0.5f,  0.5f, 1.0f,  1.0f, 0.0f, 1.0f, 1.0f}), // 5: magenta
@@ -65,13 +65,63 @@ void VulkanApplication::fillMesh()
 
 // Helper for Cosine Palette in C++
 // A simple wrapper to keep the main loop clean
-static inline std::array<float, 4> getCosineColor(float t, float offset)
+static inline std::array<float, 4> getCosineColor(double t, double offset)
 {
 	// Simple Rainbow: r, g, b phase shifted
 	const float r = 0.5f + 0.5f * std::cos(t + offset);
 	const float g = 0.5f + 0.5f * std::cos(t + offset + 2.0f);
 	const float b = 0.5f + 0.5f * std::cos(t + offset + 4.0f);
 	return { r, g, b, 1.0f };
+}
+
+void VulkanApplication::updateSatellites(double time)
+{
+	// --- SATELLITE CAMERAS PARAMETERS ---
+	const float fovY = glm::radians(45.0f);
+	const float tanHalfFov = std::tan(fovY / 2.0f);
+	const float aspect = 1.0f; // Square frustum for satellites
+	const float zNear = 0.5f;
+	const float zFar = 2.0f;   // Length of the cone
+
+	const uint32_t count = satelliteNetwork.satellites.size();
+
+	// --- GENERATE MATRICES ---
+	for (uint32_t i = 0; i < count; ++i)
+	{
+		// 1. Position on sphere
+		// (Simple placeholder distribution)
+		const float theta = (float)i / count * glm::two_pi<float>();
+		const float phi = glm::half_pi<float>() * 0.5f; // 45 deg latitude
+
+		const float r = 2.0f; // Altitude
+		const glm::vec3 pos(
+			r * std::sin(theta) * std::cos(phi),
+			r * std::cos(theta), // Y-up
+			r * std::sin(theta) * std::sin(phi)
+		);
+
+		// 2. Look At Center (0,0,0)
+		const glm::vec3 target(0.0f);
+		const glm::vec3 up(0.0f, 1.0f, 0.0f);
+		glm::mat4 view = glm::lookAt(pos, target, up);
+
+		// 3. PACK PARAMS (Column-Major: view[col][row])
+		// We overwrite Row 3 (the W components)
+		view[0][3] = tanHalfFov;
+		view[1][3] = aspect;
+		view[2][3] = zNear;
+		view[3][3] = zFar;
+
+		satelliteNetwork.satellites[i].camera = view;
+
+		// 4. Color
+		// Give each index a different phase offset so they blink differently
+		const auto offset = double(i) * 0.8;
+		const auto col = getCosineColor(time, offset);
+
+		// Copy to the 'data' field (which maps to 'color' in shader)
+		std::memcpy(satelliteNetwork.satellites[i].data, col.data(), sizeof(col));
+	}
 }
 
 int VulkanApplication::run()
@@ -83,6 +133,7 @@ int VulkanApplication::run()
 	m_mesh.upload(vulkanLoader);
 	
 	satelliteNetwork.satellites.resize(8);
+	updateSatellites(0.0);
 	
 	// 2. Register Resources (Link Mesh + Satellites to Computer)
 	computer.registerResources(m_mesh, satelliteNetwork);
@@ -106,15 +157,7 @@ int VulkanApplication::run()
 		const auto time = vulkanWindow.getTime();
 
 		// --- Update Satellite Colors (Cosine) ---
-		for (size_t i = 0; i < satelliteNetwork.satellites.size(); ++i)
-		{
-			// Give each index a different phase offset so they blink differently
-			const float offset = float(i) * 0.8f;
-			const auto col = getCosineColor(time * 2.0f, offset);
-
-			// Copy to the 'data' field (which maps to 'color' in shader)
-			std::memcpy(satelliteNetwork.satellites[i].data, col.data(), sizeof(col));
-		}
+		updateSatellites(time);
 
 		// Upload new data to UBO
 		satelliteNetwork.upload(currentFrame, vulkanLoader, *uploadSem);

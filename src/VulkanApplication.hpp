@@ -31,8 +31,9 @@ private:
 	std::vector<vk::raii::Semaphore> m_computeFinishedSemaphores;
 	std::vector<vk::raii::Semaphore> m_uploadFinishedSemaphores;
 	
-	// Mesh and helpers
+	// Resource managament helpers
 	void fillMesh();
+	void updateSatellites(double time);
 public:
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);
 	~VulkanApplication();
