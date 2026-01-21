@@ -48,12 +48,7 @@ ComputePipeline::ComputePipeline(const VulkanDevice& device)
 
 
 	// 4. Load Shader
-	constexpr vk::ShaderModuleCreateInfo shaderInfo {
-		.flags = {},
-		.codeSize = solver::size,
-		.pCode = solver::code
-	};
-	const vk::raii::ShaderModule computeShader(device.device(), shaderInfo);
+	const vk::raii::ShaderModule computeShader(device.device(), solver::smci);
 
 	const vk::PipelineShaderStageCreateInfo shaderStage {
 		.stage = vk::ShaderStageFlagBits::eCompute,

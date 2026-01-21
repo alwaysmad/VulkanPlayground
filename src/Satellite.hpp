@@ -28,6 +28,12 @@ class VulkanLoader;
 class SatelliteNetwork
 {
 public:
+	// --- Vertex Input Description (Symmetric to Mesh) ---
+	// Satellites use Vertex Pulling (Shader generates geometry), 
+	// so we explicitly define an EMPTY input state.
+	//static constexpr std::array<vk::VertexInputBindingDescription, 0> bindingDescriptions {};
+	//static constexpr std::array<vk::VertexInputAttributeDescription, 0> attributeDescriptions {};
+
 	// 1. CPU Data
 	// Modify this vector directly
 	std::vector<SatelliteData> satellites;

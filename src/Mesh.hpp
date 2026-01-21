@@ -21,11 +21,11 @@ struct alignas(16) Vertex
 class Mesh
 {
 public:
-	static constexpr vk::VertexInputBindingDescription bindingDescription {
+	static constexpr std::array<vk::VertexInputBindingDescription, 1> bindingDescriptions {{
 		.binding = 0,
 		.stride = sizeof(Vertex),
 		.inputRate = vk::VertexInputRate::eVertex
-	};
+	}};
 
 	static constexpr std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions {{
 		{ 0, 0, vk::Format::eR16G16B16A16Snorm, offsetof(Vertex, posVar1) },

@@ -1,20 +1,27 @@
+// src/GraphicsPipeline.cpp
 #include "GraphicsPipeline.hpp"
 #include "VulkanDevice.hpp"
-#include "Mesh.hpp"
 #include "PushConstants.hpp"
 
-#include "mesh.hpp" // The generated header
+// Subclasses include their specific data headers
+#include "Mesh.hpp"
+#include "Satellite.hpp"
 
-GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorFormat, vk::Format depthFormat)
+// Generated Shaders
+#include "mesh.hpp"      
+#include "satellite.hpp"
+
+// =================================================================================================
+// BASE CLASS IMPLEMENTATION
+// =================================================================================================
+GraphicsPipeline::GraphicsPipeline(
+		const VulkanDevice& device,
+		const Config& config,
+		vk::Format colorFormat,
+		vk::Format depthFormat )
 {
-	// 1. Load Shaders
-	constexpr vk::ShaderModuleCreateInfo smci {
-		.flags = {},
-		.codeSize = mesh::size,
-		.pCode = mesh::code
-	};
-	const vk::raii::ShaderModule shaderModule = vk::raii::ShaderModule(device.device(), smci);
-	// 2. Shader Stages
+	// 1. Shader Stages
+	const vk::raii::ShaderModule shaderModule(device.device(), config.shaderInfo);
 	const vk::PipelineShaderStageCreateInfo shaderStages[] = {
 		{
 			.stage = vk::ShaderStageFlagBits::eVertex,
@@ -27,38 +34,36 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 			.pName = "fragMain" // Entry point from Slang shader
 		}
 	};
-	// 3. Vertex input
-	constexpr vk::PipelineVertexInputStateCreateInfo vertexInputInfo {
-		.vertexBindingDescriptionCount = 1,
-		.pVertexBindingDescriptions = &Mesh::bindingDescription,
-		.vertexAttributeDescriptionCount = static_cast<uint32_t>(Mesh::attributeDescriptions.size()),
-		.pVertexAttributeDescriptions = Mesh::attributeDescriptions.data()
-	};
-	// 4. Input assembly
-	constexpr vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
-		.topology = vk::PrimitiveTopology::eTriangleList,
+	// 2. Vertex Input (Directly from Config)
+	const vk::PipelineVertexInputStateCreateInfo& vertexInputInfo = config.vertexInputState;
+	// 3. Input assembly
+	const vk::PipelineInputAssemblyStateCreateInfo inputAssembly {
+		.topology = config.topology,
 		.primitiveRestartEnable = vk::False
-	};
-	// 5. Viewport
+	};	
+	// 4. Viewport/Scissor (Dynamic)
 	constexpr vk::PipelineViewportStateCreateInfo viewportState {
 		.viewportCount = 1,
 		.scissorCount = 1
 	};
-	// 6. Rasterizer
-	constexpr vk::PipelineRasterizationStateCreateInfo rasterizer {
+	// 5. Rasterizer
+	const vk::PipelineRasterizationStateCreateInfo rasterizer {
 		.depthClampEnable = vk::False,
 		.rasterizerDiscardEnable = vk::False,
 		.polygonMode = vk::PolygonMode::eFill,
-		.cullMode = vk::CullModeFlagBits::eBack,
-		.frontFace = vk::FrontFace::eClockwise, // Slang/Vulkan standard
-		.depthBiasEnable = vk::False,
-		.depthBiasSlopeFactor = 1.0f,
+		.cullMode = config.cullMode,
+		.frontFace = vk::FrontFace::eClockwise,
 		.lineWidth = 1.0f
 	};
-	// 7. Multisampling
+	// 6. Multisampling
 	constexpr vk::PipelineMultisampleStateCreateInfo multisampling {
 		.rasterizationSamples = vk::SampleCountFlagBits::e1,
-		.sampleShadingEnable = vk::False
+	};
+	// 7. Depth Stencil State
+	constexpr vk::PipelineDepthStencilStateCreateInfo depthStencil {
+		.depthTestEnable = vk::True,
+		.depthWriteEnable = vk::True,
+		.depthCompareOp = vk::CompareOp::eLess, // Closer objects overwrite further ones
 	};
 	// 8. Color blending
 	static constexpr vk::PipelineColorBlendAttachmentState colorBlendAttachment {
@@ -69,15 +74,11 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 			| vk::ColorComponentFlagBits::eB
 			| vk::ColorComponentFlagBits::eA
 	};
-
 	constexpr vk::PipelineColorBlendStateCreateInfo colorBlending {
-		.logicOpEnable = vk::False,
-		.logicOp =  vk::LogicOp::eCopy,
 		.attachmentCount = 1,
 		.pAttachments = &colorBlendAttachment
 	};
-	// 9. Fixed Function State
-	// Dynamic States allow us to resize window without recreating pipeline
+	// 9. Dynamic States allow us to resize window without recreating pipeline
 	static constexpr std::array<vk::DynamicState, 2> dynamicStates = {
 		vk::DynamicState::eViewport,
 		vk::DynamicState::eScissor
@@ -87,27 +88,28 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 		.pDynamicStates = dynamicStates.data()
 	};
 	// 10. Pipeline Layout (Uniforms/Push Constants go here)
-	static constexpr vk::PushConstantRange pushConstantRange {
-		.stageFlags = vk::ShaderStageFlagBits::eVertex,
-		.offset = 0,
-		.size = sizeof(CameraPushConstants)
+	const vk::DescriptorSetLayoutBinding binding0 {
+		.binding = 0,
+		.descriptorType = vk::DescriptorType::eUniformBuffer,
+		.descriptorCount = 1,
+		.stageFlags = vk::ShaderStageFlagBits::eVertex 
 	};
-	constexpr vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
-		.setLayoutCount = 0,
+	const vk::DescriptorSetLayoutCreateInfo dslInfo { .bindingCount = 1, .pBindings = &binding0 };
+	m_descriptorSetLayout = vk::raii::DescriptorSetLayout(device.device(), dslInfo);
+
+	static constexpr vk::PushConstantRange pcRange {
+		.stageFlags = vk::ShaderStageFlagBits::eVertex,
+		.offset = 0, .size = sizeof(CameraPushConstants)
+	};
+
+	const vk::PipelineLayoutCreateInfo pipelineLayoutInfo {
+		.setLayoutCount = 1,
+		.pSetLayouts = &*m_descriptorSetLayout,
 		.pushConstantRangeCount = 1,
-		.pPushConstantRanges = &pushConstantRange
+		.pPushConstantRanges = &pcRange
 	};
 	m_pipelineLayout = vk::raii::PipelineLayout(device.device(), pipelineLayoutInfo);
-	// (New). Depth Stencil State
-	constexpr vk::PipelineDepthStencilStateCreateInfo depthStencil {
-		.depthTestEnable = vk::True,
-		.depthWriteEnable = vk::True,
-		.depthCompareOp = vk::CompareOp::eLess, // Closer objects overwrite further ones
-		.depthBoundsTestEnable = vk::False,
-		.stencilTestEnable = vk::False
-	};
 	// 11. Dynamic Rendering Info (Vulkan 1.3)
-
 	const vk::PipelineRenderingCreateInfo pipelineRenderingInfo {
 		.colorAttachmentCount = 1,
 		.pColorAttachmentFormats = &colorFormat,
@@ -117,13 +119,13 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 	const vk::GraphicsPipelineCreateInfo pipelineInfo {
 		.pNext = &pipelineRenderingInfo, // 11
 		.stageCount = 2,
-		.pStages = shaderStages, // 1, 2
-		.pVertexInputState = &vertexInputInfo, // 3
-		.pInputAssemblyState = &inputAssembly, // 4
-		.pViewportState = &viewportState, // 5
-		.pRasterizationState = &rasterizer, // 6
-		.pMultisampleState = &multisampling, // 7
-		.pDepthStencilState = &depthStencil, // (New)
+		.pStages = shaderStages, // 1
+		.pVertexInputState = &vertexInputInfo, // 2
+		.pInputAssemblyState = &inputAssembly, // 3
+		.pViewportState = &viewportState, // 4
+		.pRasterizationState = &rasterizer, // 5
+		.pMultisampleState = &multisampling, // 6
+		.pDepthStencilState = &depthStencil, // 7
 		.pColorBlendState = &colorBlending, // 8
 		.pDynamicState = &dynamicStateInfo, // 9
 		.layout = m_pipelineLayout, // 10
@@ -135,5 +137,45 @@ GraphicsPipeline::GraphicsPipeline(const VulkanDevice& device, vk::Format colorF
 	LOG_DEBUG("Graphics Pipeline created");
 }
 
-
 GraphicsPipeline::~GraphicsPipeline() { LOG_DEBUG("Graphics Pipeline destroyed"); }
+
+// =================================================================================================
+// SUBCLASS: MESH (EARTH)
+// =================================================================================================
+static constexpr GraphicsPipeline::Config meshConfig = {
+	.shaderInfo = mesh::smci,
+	.vertexInputState = {
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &Mesh::bindingDescription,
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(Mesh::attributeDescriptions.size()),
+		.pVertexAttributeDescriptions = Mesh::attributeDescriptions.data()
+	},
+	.topology = vk::PrimitiveTopology::eTriangleList,
+	.cullMode = vk::CullModeFlagBits::eBack
+};
+
+MeshPipeline::MeshPipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt)
+	: GraphicsPipeline(device, meshConfig, cFmt, dFmt)
+{
+	LOG_DEBUG("Mesh Pipeline Created");
+}
+
+// =================================================================================================
+// SUBCLASS: SATELLITE (WIREFRAME)
+// =================================================================================================
+static constexpr GraphicsPipeline::Config satelliteConfig = {
+	.shaderInfo = satellite::smci,
+	// Empty Vertex Input (Vertex Pulling)
+	.vertexInputState = {
+		.vertexBindingDescriptionCount = 0,
+		.vertexAttributeDescriptionCount = 0
+	},
+	.topology = vk::PrimitiveTopology::eLineList,
+	.cullMode = vk::CullModeFlagBits::eNone
+};
+
+SatellitePipeline::SatellitePipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt)
+	: GraphicsPipeline(device, satelliteConfig, cFmt, dFmt)
+{
+	LOG_DEBUG("Satellite Pipeline Created");
+}
