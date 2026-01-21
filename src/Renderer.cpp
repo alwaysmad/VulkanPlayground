@@ -10,15 +10,15 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
 	// Find Depth Format
-	m_depthFormat(
+	m_depth.format(
 		device.findSupportedFormat(
 			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
 			vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
 	// Create pipeline with that depth format
-	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depthFormat),
-	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
+	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depth.format),
+	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depth.format)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -31,7 +31,6 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
 	remakeRenderFinishedSemaphores();
 	
-	// Create Depth Buffer
 	createDepthBuffer();
 
 	updateProjectionMatrix();
@@ -41,9 +40,11 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	LOG_DEBUG("Renderer initialized");
 }
 
-void Renderer::createDescriptors(const SatelliteNetwork& satNet)
+Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
+
+void Renderer::createSatelliteDescriptors(const SatelliteNetwork& satNet)
 {
-	// Create Pool
+	// Pool
 	vk::DescriptorPoolSize poolSize { vk::DescriptorType::eUniformBuffer, 1 };
 	vk::DescriptorPoolCreateInfo poolInfo {
 		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
@@ -51,15 +52,15 @@ void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 	};
 	m_descriptorPool = vk::raii::DescriptorPool(m_device.device(), poolInfo);
 
-	// Allocate Set (Using Satellite Pipeline Layout)
+	// Allocate
 	vk::DescriptorSetAllocateInfo allocInfo {
 		.descriptorPool = *m_descriptorPool,
 		.descriptorSetCount = 1,
-		.pSetLayouts = &*m_satellitePipeline->getDescriptorSetLayout()
+		.pSetLayouts = &*m_satellitePipeline.getDescriptorSetLayout()
 	};
 	m_satelliteDescriptors = vk::raii::DescriptorSets(m_device.device(), allocInfo);
 
-	// Update Set
+	// Write
 	vk::DescriptorBufferInfo bufInfo {
 		.buffer = *satNet.getBuffer(),
 		.offset = 0,
@@ -80,10 +81,9 @@ void Renderer::createDepthBuffer()
 
 	const vk::ImageCreateInfo imageInfo {
 		.imageType = vk::ImageType::e2D,
-		.format = m_depthFormat,
+		.format = m_depth.format,
 		.extent = { extent.width, extent.height, 1 },
-		.mipLevels = 1,
-		.arrayLayers = 1,
+		.mipLevels = 1, .arrayLayers = 1,
 		.samples = vk::SampleCountFlagBits::e1,
 		.tiling = vk::ImageTiling::eOptimal,
 		.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -92,20 +92,20 @@ void Renderer::createDepthBuffer()
 	};
 
 	auto [img, mem] = m_device.createImage(imageInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
-	m_depthImage = std::move(img);
-	m_depthMemory = std::move(mem);
+	m_depth.image = std::move(img);
+	m_depth.memory = std::move(mem);
 
 	const vk::ImageViewCreateInfo viewInfo {
-		.image = *m_depthImage,
+		.image = *m_depth.image,
 		.viewType = vk::ImageViewType::e2D,
-		.format = m_depthFormat,
+		.format = m_depth.format,
 		.subresourceRange = {
-		.aspectMask = vk::ImageAspectFlagBits::eDepth,
-		.baseMipLevel = 0, .levelCount = 1,
-		.baseArrayLayer = 0, .layerCount = 1
+			.aspectMask = vk::ImageAspectFlagBits::eDepth,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1
 		}
 	};
-	m_depthView = vk::raii::ImageView(m_device.device(), viewInfo);
+	m_depth.view = vk::raii::ImageView(m_device.device(), viewInfo);
 }
 
 void Renderer::remakeRenderFinishedSemaphores()
@@ -121,34 +121,12 @@ void Renderer::remakeRenderFinishedSemaphores()
 	}
 }
 
-Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
-
 void Renderer::recreateSwapchain()
 {
 	m_swapchain.recreate();
 	remakeRenderFinishedSemaphores();
 	createDepthBuffer();
 	updateProjectionMatrix();
-}
-
-void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
-{
-	// must reset the fence before submitting
-	m_device.device().resetFences({fence});
-
-	constexpr vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eAllCommands;
-	
-	const vk::SubmitInfo submitInfo {
-		// If waitSemaphore exists, wait for it.
-		.waitSemaphoreCount = waitSemaphore ? 1u : 0u,
-		.pWaitSemaphores = waitSemaphore ? &waitSemaphore : nullptr,
-		.pWaitDstStageMask = waitSemaphore ? &waitStage : nullptr,
-		.commandBufferCount = 0, 
-		.signalSemaphoreCount = 0
-	};
-	
-	// Must signal 'fence' so the CPU knows this "frame" is done
-	m_device.graphicsQueue().submit(submitInfo, fence);
 }
 
 void Renderer::updateProjectionMatrix()
@@ -177,6 +155,26 @@ void Renderer::updateProjectionMatrix()
 	m_proj = hardcodedProj;
 	m_proj[0][0] *= min / static_cast<float>(extent.width);
 	m_proj[1][1] *= min / static_cast<float>(extent.height);
+}
+
+void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
+{
+	// must reset the fence before submitting
+	m_device.device().resetFences({fence});
+
+	constexpr vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eAllCommands;
+	
+	const vk::SubmitInfo submitInfo {
+		// If waitSemaphore exists, wait for it.
+		.waitSemaphoreCount = waitSemaphore ? 1u : 0u,
+		.pWaitSemaphores = waitSemaphore ? &waitSemaphore : nullptr,
+		.pWaitDstStageMask = waitSemaphore ? &waitStage : nullptr,
+		.commandBufferCount = 0, 
+		.signalSemaphoreCount = 0
+	};
+	
+	// Must signal 'fence' so the CPU knows this "frame" is done
+	m_device.graphicsQueue().submit(submitInfo, fence);
 }
 
 void Renderer::draw(

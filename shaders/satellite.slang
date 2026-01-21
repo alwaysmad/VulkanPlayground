@@ -1,7 +1,7 @@
 // shaders/satellite.slang
 #include "shared.slang"
 
-struct PushConstants { float4x4 mainCameraViewProj; };
+struct PushConstants { half4x4 mainCameraViewProj; };
 [[vk::push_constant]] PushConstants pc;
 
 [[vk::binding(0, 0)]] ConstantBuffer<SatelliteBlock> satBuffer;
