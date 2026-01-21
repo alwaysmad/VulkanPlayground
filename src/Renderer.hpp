@@ -50,21 +50,20 @@ private:
 	void recreateSwapchain();
 
 	// Depth Resources
-	struct DepthResources {
-		vk::raii::Image image = nullptr;
-		TrackedDeviceMemory memory;
-		vk::raii::ImageView view = nullptr;
-		vk::Format format = vk::Format::eUndefined;
-	};
-	DepthResources m_depth;
+	vk::raii::Image     m_depthImage = nullptr;
+	TrackedDeviceMemory m_depthMemory;
+	vk::raii::ImageView m_depthView = nullptr;
+	vk::Format          m_depthFormat;
 	void createDepthBuffer();
 
+	// Pipelines
 	MeshPipeline m_meshPipeline;
 	SatellitePipeline m_satellitePipeline;
 
 	// Descriptors for Graphics (Satellite UBO)
 	vk::raii::DescriptorPool m_descriptorPool = nullptr;
 	vk::raii::DescriptorSets m_satelliteDescriptors = nullptr;
+	void createDescriptors(const SatelliteNetwork& satNet);
 
 	// Sync
 	// Fixed size [MAX_FRAMES_IN_FLIGHT]

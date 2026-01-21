@@ -10,15 +10,15 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
 	// Find Depth Format
-	m_depth.format(
+	m_depthFormat(
 		device.findSupportedFormat(
 			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
 			vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
 	// Create pipeline with that depth format
-	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depth.format),
-	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depth.format)
+	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depthFormat),
+	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -27,7 +27,6 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 		{ m_imageAvailableSemaphores.emplace_back(m_device.device(), semaphoreInfo); }
 
 	// 2. Create Per-Image Sync Objects (Render Finished)
-	// We need one per swapchain image to satisfy validation layers
 	m_renderFinishedSemaphores.reserve(m_swapchain.getImages().size());
 	remakeRenderFinishedSemaphores();
 	
@@ -42,9 +41,9 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 
 Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
 
-void Renderer::createSatelliteDescriptors(const SatelliteNetwork& satNet)
+void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 {
-	// Pool
+	// Create Pool
 	vk::DescriptorPoolSize poolSize { vk::DescriptorType::eUniformBuffer, 1 };
 	vk::DescriptorPoolCreateInfo poolInfo {
 		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
@@ -52,7 +51,7 @@ void Renderer::createSatelliteDescriptors(const SatelliteNetwork& satNet)
 	};
 	m_descriptorPool = vk::raii::DescriptorPool(m_device.device(), poolInfo);
 
-	// Allocate
+	// Allocate Set (Using Satellite Pipeline Layout)
 	vk::DescriptorSetAllocateInfo allocInfo {
 		.descriptorPool = *m_descriptorPool,
 		.descriptorSetCount = 1,
@@ -60,7 +59,7 @@ void Renderer::createSatelliteDescriptors(const SatelliteNetwork& satNet)
 	};
 	m_satelliteDescriptors = vk::raii::DescriptorSets(m_device.device(), allocInfo);
 
-	// Write
+	// Update Set
 	vk::DescriptorBufferInfo bufInfo {
 		.buffer = *satNet.getBuffer(),
 		.offset = 0,
@@ -81,9 +80,10 @@ void Renderer::createDepthBuffer()
 
 	const vk::ImageCreateInfo imageInfo {
 		.imageType = vk::ImageType::e2D,
-		.format = m_depth.format,
+		.format = m_depthFormat,
 		.extent = { extent.width, extent.height, 1 },
-		.mipLevels = 1, .arrayLayers = 1,
+		.mipLevels = 1,
+		.arrayLayers = 1,
 		.samples = vk::SampleCountFlagBits::e1,
 		.tiling = vk::ImageTiling::eOptimal,
 		.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -92,20 +92,20 @@ void Renderer::createDepthBuffer()
 	};
 
 	auto [img, mem] = m_device.createImage(imageInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
-	m_depth.image = std::move(img);
-	m_depth.memory = std::move(mem);
+	m_depthImage = std::move(img);
+	m_depthMemory = std::move(mem);
 
 	const vk::ImageViewCreateInfo viewInfo {
-		.image = *m_depth.image,
+		.image = *m_depthImage,
 		.viewType = vk::ImageViewType::e2D,
-		.format = m_depth.format,
+		.format = m_depthFormat,
 		.subresourceRange = {
-			.aspectMask = vk::ImageAspectFlagBits::eDepth,
-			.baseMipLevel = 0, .levelCount = 1,
-			.baseArrayLayer = 0, .layerCount = 1
+		.aspectMask = vk::ImageAspectFlagBits::eDepth,
+		.baseMipLevel = 0, .levelCount = 1,
+		.baseArrayLayer = 0, .layerCount = 1
 		}
 	};
-	m_depth.view = vk::raii::ImageView(m_device.device(), viewInfo);
+	m_depthView = vk::raii::ImageView(m_device.device(), viewInfo);
 }
 
 void Renderer::remakeRenderFinishedSemaphores()
@@ -179,6 +179,7 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 
 void Renderer::draw(
 		const Mesh& mesh,
+		const SatelliteNetwork& satNet,
 		uint32_t currentFrame,
 		vk::Fence fence,
 		vk::Semaphore waitSemaphore,
@@ -212,7 +213,7 @@ void Renderer::draw(
 
 	// 3. Record
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordCommands(cmd, imageIndex, mesh, modelMatrix, viewMatrix);
+	recordCommands(cmd, imageIndex, mesh, satNet, modelMatrix, viewMatrix);
 
 	// 4. Submit
 	// Signals 'renderSem' when rendering finishes, so Present can start.
@@ -258,6 +259,7 @@ void Renderer::recordCommands(
 		const vk::raii::CommandBuffer& cmd,
 		uint32_t imageIndex,
 		const Mesh& mesh,
+		const SatelliteNetwork& satNet,
 		const glm::mat4& modelMatrix,
 		const glm::mat4& viewMatrix )
 {
@@ -268,7 +270,7 @@ void Renderer::recordCommands(
 	cmd.reset();
 	cmd.begin({ .flags = {} });
 
-	// Combine the barriers
+	// --- BARRIERS ---
 	const vk::ImageMemoryBarrier2 barriers[] = { 
 		// Barrier: Undefined -> Color Attachment
 		{
@@ -298,7 +300,7 @@ void Renderer::recordCommands(
 		}
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
-
+	
 	// --- ATTACHMENTS ---
 	// Color Attachment
 	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
@@ -325,7 +327,7 @@ void Renderer::recordCommands(
 		.pColorAttachments = &colorAttachment,
 		.pDepthAttachment = &depthAttachment
 	};
-
+	// --- 2. START RENDERING ---
 	cmd.beginRendering(renderInfo);
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline.getPipeline());
@@ -335,19 +337,45 @@ void Renderer::recordCommands(
 	const vk::Rect2D scissor { .extent = extent };
 	cmd.setScissor(0, scissor);
 
+	// =========================================================================
+	// PASS 1: EARTH MESH
+	// =========================================================================
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_meshPipeline.getPipeline());
+	
 	// --- Push camera and projection matrices ---
+	// Mesh Shader expects CameraPushConstants (PackedHalfMat4)
 	m_pc.viewProj = PackedHalfMat4(m_proj * viewMatrix);
 	m_pc.model = modelMatrix; 
-	cmd.pushConstants<CameraPushConstants>(*m_pipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc);
-	// -------------------------
+	cmd.pushConstants<CameraPushConstants>(*m_meshPipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc);
 
-	// bind mesh to command and order to draw it	
 	cmd.bindVertexBuffers(0, {*mesh.getVertexBuffer()}, {0});
 	cmd.bindIndexBuffer(*mesh.getIndexBuffer(), 0, vk::IndexType::eUint32);
 	cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0);
 
+	// =========================================================================
+	// PASS 2: SATELLITES (Wireframes)
+	// =========================================================================
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
+	
+	// Satellite Shader expects "half4x4" at offset 0 (overlapping the HalfMat4)
+	cmd.pushConstants<PackedHalfMat4>(*m_satellitePipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc.viewProj);
+
+	// Bind Descriptor Set (Satellite UBO)
+	cmd.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics, 
+		*m_satellitePipeline.getLayout(), 
+		0, 
+		{*m_satelliteDescriptors[0]}, 
+		nullptr
+	);
+
+	// Draw using Vertex Pulling (no vertex buffers)
+	// 32 vertices per satellite (defined in shader kIndices)
+	cmd.draw(32, static_cast<uint32_t>(satNet.satellites.size()), 0, 0);
+
 	cmd.endRendering();
 
+	// --- BARRIER (PRESENT) ---
 	// Barrier: Color Attachment -> Present
 	const vk::ImageMemoryBarrier2 postRenderBarrier {
 		// We must wait for rendering to finish
