@@ -1,9 +1,11 @@
 #include "Renderer.hpp"
 #include "VulkanDevice.hpp"
 #include "VulkanWindow.hpp"
-#include "DebugOutput.hpp"
 
-Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
+#include "Mesh.hpp"
+#include "Satellite.hpp"
+
+Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const SatelliteNetwork& satNet) :
 	m_device(device), 
 	m_command(device, device.getGraphicsQueueIndex()),
 	m_swapchain(device, window),
@@ -15,7 +17,8 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
 	// Create pipeline with that depth format
-	m_pipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
+	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depthFormat),
+	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -32,7 +35,43 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window) :
 	createDepthBuffer();
 
 	updateProjectionMatrix();
+
+	createDescriptors(satNet);
+
 	LOG_DEBUG("Renderer initialized");
+}
+
+void Renderer::createDescriptors(const SatelliteNetwork& satNet)
+{
+	// Create Pool
+	vk::DescriptorPoolSize poolSize { vk::DescriptorType::eUniformBuffer, 1 };
+	vk::DescriptorPoolCreateInfo poolInfo {
+		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+		.maxSets = 1, .poolSizeCount = 1, .pPoolSizes = &poolSize
+	};
+	m_descriptorPool = vk::raii::DescriptorPool(m_device.device(), poolInfo);
+
+	// Allocate Set (Using Satellite Pipeline Layout)
+	vk::DescriptorSetAllocateInfo allocInfo {
+		.descriptorPool = *m_descriptorPool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &*m_satellitePipeline->getDescriptorSetLayout()
+	};
+	m_satelliteDescriptors = vk::raii::DescriptorSets(m_device.device(), allocInfo);
+
+	// Update Set
+	vk::DescriptorBufferInfo bufInfo {
+		.buffer = *satNet.getBuffer(),
+		.offset = 0,
+		.range = satNet.getFrameSize()
+	};
+	vk::WriteDescriptorSet write {
+		.dstSet = *m_satelliteDescriptors[0],
+		.dstBinding = 0, .descriptorCount = 1,
+		.descriptorType = vk::DescriptorType::eUniformBuffer,
+		.pBufferInfo = &bufInfo
+	};
+	m_device.device().updateDescriptorSets(write, nullptr);
 }
 
 void Renderer::createDepthBuffer()
