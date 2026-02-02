@@ -76,7 +76,7 @@ static inline std::array<float, 4> getCosineColor(double t, double offset)
 void VulkanApplication::updateSatellites(double time)
 {
 	// --- SATELLITE CAMERAS PARAMETERS ---
-	const float fovY = glm::radians(15.0f);
+	//const float fovY = glm::radians(15.0f);
 	const float tanHalfFov = 0.5; //std::tan(fovY / 2.0f);
 	const float aspect = 1.0f; // Square frustum for satellites
 	const float zNear = 0.1f;
@@ -89,10 +89,10 @@ void VulkanApplication::updateSatellites(double time)
 	{
 		// 1. Position on sphere
 		// (Simple placeholder distribution)
-		const float theta = (float)(i+1) / (count+1) * glm::two_pi<float>();
-		const float phi = glm::half_pi<float>() * 0.5f; // 45 deg latitude
+		const float theta = (float)i / count * glm::two_pi<float>();
+		const float phi = glm::half_pi<float>() * 0.2f; // 45 deg latitude
 
-		const float r = 1.0f; // Altitude
+		const float r = 1.5f; // Altitude
 		const glm::vec3 pos(
 			r * std::sin(theta) * std::cos(phi),
 			r * std::cos(theta), // Y-up
@@ -101,7 +101,7 @@ void VulkanApplication::updateSatellites(double time)
 
 		// 2. Look At Center (0,0,0)
 		const glm::vec3 target(0.0f);
-		const glm::vec3 up(0.0f, 1.0f, 0.0f);
+		const glm::vec3 up(std::cos(theta)*std::cos(phi), -std::sin(theta), std::cos(theta)*std::sin(phi));
 		glm::mat4 view = glm::lookAt(pos, target, up);
 
 		// 3. PACK PARAMS (Column-Major: view[col][row])
@@ -110,11 +110,6 @@ void VulkanApplication::updateSatellites(double time)
 		view[1][3] = aspect;
 		view[2][3] = zNear;
 		view[3][3] = zFar;
-		LOG_DEBUG(
-				float(view[0][3]) << " " <<
-				float(view[1][3]) << " " <<
-				float(view[2][3]) << " " <<
-				float(view[3][3]) << "\n" );
 
 		satelliteNetwork.satellites[i].camera = view;
 
@@ -175,7 +170,7 @@ int VulkanApplication::run()
 			cos_time,   0.0f,      sin_time, 0.0f,
 			0.0f,       1.0f,      0.0f,     0.0f,
 			-sin_time,  0.0f,      cos_time, 0.0f,
-			0.0f,       0.0f,      2.0f,     1.0f };
+			0.0f,       0.0f,      0.0f,     1.0f };
 		// ---
 
 		// --- Compute  ---

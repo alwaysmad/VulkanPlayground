@@ -18,7 +18,7 @@ struct VertexOutput
 // 9 Points: 1 Tip + 8 Corners (Near/Far)
 // Z=0 is Near, Z=1 is Far (Vulkan)
 static const float4 kNdcCorners[9] = {
-	float4(0, 0, -1, 0),     // 0: Tip
+	float4(         0, 0, -1, 0),     // 0: Tip
 	float4(-1, -1, 0, 1),    // 1: Near BL
 	float4( 1, -1, 0, 1),    // 2: Near BR
 	float4( 1,  1, 0, 1),    // 3: Near TR
