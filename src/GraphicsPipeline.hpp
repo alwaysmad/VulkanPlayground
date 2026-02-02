@@ -4,12 +4,10 @@ class VulkanDevice;
 class GraphicsPipeline
 {
 public:
-	virtual ~GraphicsPipeline() = default;
 
 	inline const vk::raii::Pipeline& getPipeline() const { return m_pipeline; }
 	inline const vk::raii::PipelineLayout& getLayout() const { return m_pipelineLayout; }
 	inline const vk::raii::DescriptorSetLayout& getDescriptorSetLayout() const { return m_descriptorSetLayout; }
-
 protected:
 	// Nested Config Struct (Protected: only subclasses need this)
 	struct Config
@@ -43,6 +41,7 @@ class MeshPipeline : public GraphicsPipeline
 {
 public:
 	MeshPipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt);
+	~MeshPipeline();
 };
 
 // --- Subclass: Satellite Wireframes ---
@@ -50,4 +49,5 @@ class SatellitePipeline : public GraphicsPipeline
 {
 public:
 	SatellitePipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt);
+	~SatellitePipeline();
 };

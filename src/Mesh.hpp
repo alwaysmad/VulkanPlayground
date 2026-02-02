@@ -22,9 +22,11 @@ class Mesh
 {
 public:
 	static constexpr std::array<vk::VertexInputBindingDescription, 1> bindingDescriptions {{
-		.binding = 0,
-		.stride = sizeof(Vertex),
-		.inputRate = vk::VertexInputRate::eVertex
+		{
+			.binding = 0,
+			.stride = sizeof(Vertex),
+			.inputRate = vk::VertexInputRate::eVertex
+		}
 	}};
 
 	static constexpr std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions {{

@@ -50,9 +50,9 @@ VertexOutput vertMain(uint vertexID : SV_VertexID, uint instanceID : SV_Instance
 	float4 worldPos = mul(invViewProj, ndcPos);
 
 	// Perspective Divide is CRITICAL here
-	// For the tip (w=0 input), worldPos.w will be non-zero (approx 1/n - 1/f)
+	// For the tip (w=0 input), worldPos.w will be non-zero (1/n - 1/f)
 	// Dividing by it places the vertex exactly at the camera origin.
-	//worldPos /= worldPos.w; 
+	worldPos /= worldPos.w; 
 
 	// 4. Project to Main Camera
 	VertexOutput out;

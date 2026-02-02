@@ -1,5 +1,4 @@
 #include "VulkanApplication.hpp"
-#include "VulkanCommand.hpp" // for MAX_FRAMES_IN_FLIGHT and advanceFrame()
 
 VulkanApplication::VulkanApplication(const std::string& AppName, const std::string& DeviceName, uint32_t w, uint32_t h) :
 	appName(AppName),
@@ -174,7 +173,7 @@ int VulkanApplication::run()
 			0.0f,       0.0f,      0.0f,     1.0f };
 		// ---
 
-		// --- STEP 2: Compute Copy ---
+		// --- Compute  ---
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
@@ -182,7 +181,7 @@ int VulkanApplication::run()
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices
-		renderer.draw(m_mesh, currentFrame, *fence, *computeSem, model);
+		renderer.draw(m_mesh, satelliteNetwork, currentFrame, *fence, *computeSem, model);
 		
 		// 3. Flow Guaranteed: Always advance
 		currentFrame = advanceFrame(currentFrame);

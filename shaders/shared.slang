@@ -71,5 +71,5 @@ float4x4 getInvViewProj(float4x4 camera)
 		0.0,	0.0,	1.0/f - 1.0/n,	1.0/n
 	);
 
-	return mul(iView, iView);	
+	return mul(iView, iProj);
 }

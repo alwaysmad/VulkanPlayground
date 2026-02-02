@@ -137,45 +137,39 @@ GraphicsPipeline::GraphicsPipeline(
 	LOG_DEBUG("Graphics Pipeline created");
 }
 
-GraphicsPipeline::~GraphicsPipeline() { LOG_DEBUG("Graphics Pipeline destroyed"); }
-
 // =================================================================================================
 // SUBCLASS: MESH (EARTH)
 // =================================================================================================
-static constexpr GraphicsPipeline::Config meshConfig = {
-	.shaderInfo = mesh::smci,
-	.vertexInputState = {
-		.vertexBindingDescriptionCount = 1,
-		.pVertexBindingDescriptions = &Mesh::bindingDescription,
-		.vertexAttributeDescriptionCount = static_cast<uint32_t>(Mesh::attributeDescriptions.size()),
-		.pVertexAttributeDescriptions = Mesh::attributeDescriptions.data()
-	},
-	.topology = vk::PrimitiveTopology::eTriangleList,
-	.cullMode = vk::CullModeFlagBits::eBack
-};
-
 MeshPipeline::MeshPipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt)
-	: GraphicsPipeline(device, meshConfig, cFmt, dFmt)
-{
-	LOG_DEBUG("Mesh Pipeline Created");
-}
+	: GraphicsPipeline(device, 
+		{
+			.shaderInfo = mesh::smci,
+			.vertexInputState = {
+				.vertexBindingDescriptionCount = 1,
+				.pVertexBindingDescriptions = Mesh::bindingDescriptions.data(),
+				.vertexAttributeDescriptionCount = static_cast<uint32_t>(Mesh::attributeDescriptions.size()),
+				.pVertexAttributeDescriptions = Mesh::attributeDescriptions.data()
+			},
+			.topology = vk::PrimitiveTopology::eTriangleList,
+			.cullMode = vk::CullModeFlagBits::eBack
+		}, cFmt, dFmt) { LOG_DEBUG("Mesh Pipeline Created"); }
+
+MeshPipeline::~MeshPipeline() { LOG_DEBUG("Mesh Pipeline destroyed"); }
 
 // =================================================================================================
 // SUBCLASS: SATELLITE (WIREFRAME)
 // =================================================================================================
-static constexpr GraphicsPipeline::Config satelliteConfig = {
-	.shaderInfo = satellite::smci,
-	// Empty Vertex Input (Vertex Pulling)
-	.vertexInputState = {
-		.vertexBindingDescriptionCount = 0,
-		.vertexAttributeDescriptionCount = 0
-	},
-	.topology = vk::PrimitiveTopology::eLineList,
-	.cullMode = vk::CullModeFlagBits::eNone
-};
-
 SatellitePipeline::SatellitePipeline(const VulkanDevice& device, vk::Format cFmt, vk::Format dFmt)
-	: GraphicsPipeline(device, satelliteConfig, cFmt, dFmt)
-{
-	LOG_DEBUG("Satellite Pipeline Created");
-}
+	: GraphicsPipeline(device, 
+		{
+			.shaderInfo = satellite::smci,
+			// Empty Vertex Input (Vertex Pulling)
+			.vertexInputState = {
+				.vertexBindingDescriptionCount = 0,
+				.vertexAttributeDescriptionCount = 0
+			},
+			.topology = vk::PrimitiveTopology::eLineList,
+			.cullMode = vk::CullModeFlagBits::eNone
+		}, cFmt, dFmt) { LOG_DEBUG("Satellite Pipeline Created"); }
+
+SatellitePipeline::~SatellitePipeline() { LOG_DEBUG("Satellite Pipeline destroyed"); }

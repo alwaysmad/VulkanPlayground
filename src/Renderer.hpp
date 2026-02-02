@@ -14,7 +14,7 @@ class SatelliteNetwork;
 class Renderer
 {
 public:
-	Renderer(const VulkanDevice& device, const VulkanWindow& window);
+	Renderer(const VulkanDevice& device, const VulkanWindow& window, const SatelliteNetwork& satNet);
 	~Renderer();
 
 	// - Returns void. The App controls the frame loop.
@@ -72,7 +72,7 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer&, uint32_t, const Mesh&, const glm::mat4&, const glm::mat4&);
+	void recordCommands(const vk::raii::CommandBuffer&, uint32_t, const Mesh&, const SatelliteNetwork&, const glm::mat4&, const glm::mat4&);
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
 	// Constants and default values
