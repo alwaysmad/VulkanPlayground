@@ -9,7 +9,7 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 	vulkanLoader(vulkanDevice),
 	satelliteNetwork(vulkanDevice, 8), m_mesh(),
 	computer(vulkanDevice),
-	renderer(vulkanDevice, vulkanWindow)
+	renderer(vulkanDevice, vulkanWindow, satelliteNetwork)
 {
 	// Create Fences (Signaled so we don't wait on first frame)
 	constexpr vk::FenceCreateInfo fenceInfo{ .flags = vk::FenceCreateFlagBits::eSignaled };
@@ -76,11 +76,11 @@ static inline std::array<float, 4> getCosineColor(double t, double offset)
 void VulkanApplication::updateSatellites(double time)
 {
 	// --- SATELLITE CAMERAS PARAMETERS ---
-	const float fovY = glm::radians(45.0f);
+	const float fovY = glm::radians(15.0f);
 	const float tanHalfFov = std::tan(fovY / 2.0f);
 	const float aspect = 1.0f; // Square frustum for satellites
-	const float zNear = 0.5f;
-	const float zFar = 2.0f;   // Length of the cone
+	const float zNear = 0.1f;
+	const float zFar = 0.5f;   // Length of the cone
 
 	const uint32_t count = satelliteNetwork.satellites.size();
 

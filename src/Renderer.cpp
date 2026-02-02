@@ -356,7 +356,7 @@ void Renderer::recordCommands(
 	// =========================================================================
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
 	
-	// Satellite Shader expects "half4x4" at offset 0 (overlapping the HalfMat4)
+	// Satellite Shader expects "half4x4" at offset 0
 	cmd.pushConstants<PackedHalfMat4>(*m_satellitePipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc.viewProj);
 
 	// Bind Descriptor Set (Satellite UBO)
