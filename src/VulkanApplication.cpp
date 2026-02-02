@@ -79,8 +79,8 @@ void VulkanApplication::updateSatellites(double time)
 	const float fovY = glm::radians(15.0f);
 	const float tanHalfFov = std::tan(fovY / 2.0f);
 	const float aspect = 1.0f; // Square frustum for satellites
-	const float zNear = 0.1f;
-	const float zFar = 0.5f;   // Length of the cone
+	const float zNear = 0.01f;
+	const float zFar = 0.3f;   // Length of the cone
 
 	const uint32_t count = satelliteNetwork.satellites.size();
 
@@ -92,7 +92,7 @@ void VulkanApplication::updateSatellites(double time)
 		const float theta = (float)i / count * glm::two_pi<float>();
 		const float phi = glm::half_pi<float>() * 0.5f; // 45 deg latitude
 
-		const float r = 2.0f; // Altitude
+		const float r = 1.0f; // Altitude
 		const glm::vec3 pos(
 			r * std::sin(theta) * std::cos(phi),
 			r * std::cos(theta), // Y-up
