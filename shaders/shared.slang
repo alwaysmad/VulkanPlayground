@@ -49,10 +49,10 @@ float4x4 getViewProj(float4x4 camera)
 float4x4 getInvViewProj(float4x4 camera)
 {
 	// Unpack camera paramaters
-	float t = camera[0].w; // Tan(FOV/2)
-	float a = camera[1].w; // Aspect
-	float n = camera[2].w; // z-Near
-	float f = camera[3].w; // z-Far
+	float t = 0.5; //camera[0].w; // Tan(FOV/2)
+	float a = 1; //camera[1].w; // Aspect
+	float n = 0.1; //camera[2].w; // z-Near
+	float f = 0.4; //camera[3].w; // z-Far
 	
 	// Construct inverse view matrix
 	// Transpose Rotation + Dot Product Translation
@@ -62,6 +62,7 @@ float4x4 getInvViewProj(float4x4 camera)
 		float4(camera[2].xyz, -dot(camera[2].xyz, camera[3].xyz)),
 		float4(0.0, 0.0, 0.0, 1.0)
 	);
+	iView = camera;
 
 	// Construct inverse proj matrix
 	float4x4 iProj = float4x4(

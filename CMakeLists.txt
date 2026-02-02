@@ -86,7 +86,7 @@ message(STATUS "Found Slang compiler: ${SLANGC_EXECUTABLE}")
 # --- Define Shader Compilation Function ---
 function(add_slang_shader_target TARGET_NAME)
 	# parse arguments list
-	cmake_parse_arguments(ARG "" "" "SOURCES;ENTRIES" ${ARGN})
+	cmake_parse_arguments(ARG "" "" "SOURCES;ENTRIES;DEPENDS" ${ARGN})
 
 	list(GET ARG_SOURCES 0 MAIN_SOURCE)
 	get_filename_component(SHADER_NAME ${MAIN_SOURCE} NAME_WE)
@@ -120,7 +120,7 @@ function(add_slang_shader_target TARGET_NAME)
 			-DNAMESPACE=${SHADER_NAME}
 			-P ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
 
-		DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake
+		DEPENDS ${ARG_SOURCES} ${CMAKE_SOURCE_DIR}/scripts/embed_spv.cmake ${ARG_DEPENDS}
 		COMMENT "Compiling and Embedding Slang Shader: ${SHADER_NAME}"
 	)
 

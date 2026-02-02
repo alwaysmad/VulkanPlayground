@@ -79,13 +79,15 @@ add_slang_shader_target(
 	CompileMesh
 	SOURCES ${CMAKE_SOURCE_DIR}/shaders/mesh.slang
 	ENTRIES vertMain fragMain
+	DEPENDS ${CMAKE_SOURCE_DIR}/shaders/shared.slang
 )
 
-# 7.2 Compile Satellite (New)
+# 7.2 Compile Satellite (Graphics too)
 add_slang_shader_target(
 	CompileSatellite
 	SOURCES ${CMAKE_SOURCE_DIR}/shaders/satellite.slang
 	ENTRIES vertMain fragMain
+	DEPENDS ${CMAKE_SOURCE_DIR}/shaders/shared.slang
 )
 
 # 7.3. Compile Solver (Compute)
@@ -93,6 +95,7 @@ add_slang_shader_target(
 	CompileSolver
 	SOURCES ${CMAKE_SOURCE_DIR}/shaders/solver.slang
 	ENTRIES computeMain
+	DEPENDS ${CMAKE_SOURCE_DIR}/shaders/shared.slang
 )
 
 # 8. Add dependencies so they build before the executable

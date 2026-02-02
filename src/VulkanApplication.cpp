@@ -77,10 +77,10 @@ void VulkanApplication::updateSatellites(double time)
 {
 	// --- SATELLITE CAMERAS PARAMETERS ---
 	const float fovY = glm::radians(15.0f);
-	const float tanHalfFov = std::tan(fovY / 2.0f);
+	const float tanHalfFov = 0.5; //std::tan(fovY / 2.0f);
 	const float aspect = 1.0f; // Square frustum for satellites
-	const float zNear = 0.01f;
-	const float zFar = 0.3f;   // Length of the cone
+	const float zNear = 0.1f;
+	const float zFar = 0.4f;   // Length of the cone
 
 	const uint32_t count = satelliteNetwork.satellites.size();
 
@@ -89,7 +89,7 @@ void VulkanApplication::updateSatellites(double time)
 	{
 		// 1. Position on sphere
 		// (Simple placeholder distribution)
-		const float theta = (float)i / count * glm::two_pi<float>();
+		const float theta = (float)(i+1) / (count+1) * glm::two_pi<float>();
 		const float phi = glm::half_pi<float>() * 0.5f; // 45 deg latitude
 
 		const float r = 1.0f; // Altitude
@@ -110,6 +110,11 @@ void VulkanApplication::updateSatellites(double time)
 		view[1][3] = aspect;
 		view[2][3] = zNear;
 		view[3][3] = zFar;
+		LOG_DEBUG(
+				float(view[0][3]) << " " <<
+				float(view[1][3]) << " " <<
+				float(view[2][3]) << " " <<
+				float(view[3][3]) << "\n" );
 
 		satelliteNetwork.satellites[i].camera = view;
 
@@ -170,7 +175,7 @@ int VulkanApplication::run()
 			cos_time,   0.0f,      sin_time, 0.0f,
 			0.0f,       1.0f,      0.0f,     0.0f,
 			-sin_time,  0.0f,      cos_time, 0.0f,
-			0.0f,       0.0f,      0.0f,     1.0f };
+			0.0f,       0.0f,      2.0f,     1.0f };
 		// ---
 
 		// --- Compute  ---
