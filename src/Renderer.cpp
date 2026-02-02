@@ -52,10 +52,11 @@ void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 	m_descriptorPool = vk::raii::DescriptorPool(m_device.device(), poolInfo);
 
 	// Allocate Set (Using Satellite Pipeline Layout)
+	vk::DescriptorSetLayout dsl = *m_satellitePipeline.getDescriptorSetLayout();
 	vk::DescriptorSetAllocateInfo allocInfo {
 		.descriptorPool = *m_descriptorPool,
 		.descriptorSetCount = 1,
-		.pSetLayouts = &*m_satellitePipeline.getDescriptorSetLayout()
+		.pSetLayouts = &dsl
 	};
 	m_satelliteDescriptors = vk::raii::DescriptorSets(m_device.device(), allocInfo);
 
@@ -330,8 +331,6 @@ void Renderer::recordCommands(
 	// --- 2. START RENDERING ---
 	cmd.beginRendering(renderInfo);
 
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline.getPipeline());
-	
 	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
 	cmd.setViewport(0, vp);
 	const vk::Rect2D scissor { .extent = extent };

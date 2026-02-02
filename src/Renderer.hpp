@@ -62,7 +62,7 @@ private:
 
 	// Descriptors for Graphics (Satellite UBO)
 	vk::raii::DescriptorPool m_descriptorPool = nullptr;
-	vk::raii::DescriptorSets m_satelliteDescriptors = nullptr;
+	vk::raii::DescriptorSets m_satelliteDescriptors;
 	void createDescriptors(const SatelliteNetwork& satNet);
 
 	// Sync
