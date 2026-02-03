@@ -56,6 +56,7 @@ public:
 
 	inline void setWindowTitle(const std::string& title) { glfwSetWindowTitle(window, title.c_str()); }
 	inline double getTime() const { return glfwGetTime(); }
+	inline GLFWwindow* getGLFWwindow() const { return window; }
 
 private:
 	GLFWwindow* window;

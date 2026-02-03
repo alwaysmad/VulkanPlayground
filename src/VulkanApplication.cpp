@@ -24,8 +24,91 @@ VulkanApplication::VulkanApplication(const std::string& AppName, const std::stri
 		m_computeFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo);
 		m_uploadFinishedSemaphores.emplace_back(vulkanDevice.device(), semInfo);
 	}
+	
+	// --- SETUP INPUT ---
+	GLFWwindow* window = vulkanWindow.getGLFWwindow();
+	glfwSetWindowUserPointer(window, this); // Store 'this' so callbacks can access App
+
+	glfwSetCursorPosCallback(window, cursorPositionCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetScrollCallback(window, scrollCallback);
+
+	// Set initial camera angles matching the old "defaultView"
+	// Eye approx (0, 1.5, 3.0) -> Radius ~3.35
+	m_camera.radius = 3.35f;
+	m_camera.theta = 0.0f;
+	m_camera.phi = 1.1f; // ~63 degrees down from Y-up
 
 	LOG_DEBUG("VulkanApplication instance created");
+}
+
+glm::mat4 VulkanApplication::getCameraView() const
+{
+	// Spherical to Cartesian
+	// Y-Up coordinate system
+	const float x = m_camera.radius * std::sin(m_camera.phi) * std::sin(m_camera.theta);
+	const float y = m_camera.radius * std::cos(m_camera.phi);
+	const float z = m_camera.radius * std::sin(m_camera.phi) * std::cos(m_camera.theta);
+
+	const glm::vec3 eye(x, y, z);
+	const glm::vec3 center(0.0f, 0.0f, 0.0f);
+	const glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+	return glm::lookAt(eye, center, up);
+}
+
+void VulkanApplication::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
+{
+	auto* app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+	if (!app->m_camera.isDragging) return;
+
+	// Delta movement
+	const double dx = xpos - app->m_camera.lastX;
+	const double dy = ypos - app->m_camera.lastY;
+	app->m_camera.lastX = xpos;
+	app->m_camera.lastY = ypos;
+
+	// Sensitivity
+	const float sensitivity = 0.005f;
+
+	// Update Angles
+	app->m_camera.theta -= dx * sensitivity;
+	app->m_camera.phi   -= dy * sensitivity;
+
+	// Clamp Phi (prevent flipping over the pole)
+	const float epsilon = 0.1f;
+	app->m_camera.phi = std::max(epsilon, std::min(glm::pi<float>() - epsilon, app->m_camera.phi));
+}
+
+void VulkanApplication::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+	auto* app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		if (action == GLFW_PRESS)
+		{
+		    app->m_camera.isDragging = true;
+		    glfwGetCursorPos(window, &app->m_camera.lastX, &app->m_camera.lastY);
+		}
+		else if (action == GLFW_RELEASE)
+		{
+		    app->m_camera.isDragging = false;
+		}
+	}
+}
+
+void VulkanApplication::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	auto* app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+
+	// Zoom in/out
+	const float zoomSpeed = 0.2f;
+	app->m_camera.radius -= yoffset * zoomSpeed;
+
+	// Clamp radius
+	if (app->m_camera.radius < 0.5f) app->m_camera.radius = 0.5f;
+	if (app->m_camera.radius > 20.0f) app->m_camera.radius = 20.0f;
 }
 
 VulkanApplication::~VulkanApplication()
@@ -177,11 +260,11 @@ int VulkanApplication::run()
 		// Run the compute shader (Copies Satellite Color -> Vertex Color)
 		// Pass nullptr for fence (we don't need CPU wait here)
 		// Signal computeSem for the Graphics Queue
-		computer.compute(currentFrame, model, dt,  nullptr, *uploadSem, *computeSem);
+		computer.compute(currentFrame, model, dt, {}, *uploadSem, *computeSem);
 
 		// --- Render ---
 		// Wait for computeSem before processing vertices
-		renderer.draw(m_mesh, satelliteNetwork, currentFrame, *fence, *computeSem, model);
+		renderer.draw(m_mesh, satelliteNetwork, currentFrame, *fence, *computeSem, model, getCameraView());
 		
 		// 3. Flow Guaranteed: Always advance
 		currentFrame = advanceFrame(currentFrame);

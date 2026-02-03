@@ -34,6 +34,26 @@ private:
 	// Resource managament helpers
 	void fillMesh();
 	void updateSatellites(double time);
+
+	// --- CAMERA STATE ---
+	struct CameraState {
+		float theta = 0.0f;     // Azimuth (Angle around Y)
+		float phi = 1.0f;       // Polar (Angle down from Y)
+		float radius = 3.5f;    // Distance from center
+
+		// Input state
+		bool isDragging = false;
+		double lastX = 0.0;
+		double lastY = 0.0;
+	} m_camera;
+	
+	// Helper to calculate view matrix based on state
+	glm::mat4 getCameraView() const;
+
+	// GLFW Callbacks (must be static or simple wrappers)
+	static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
+	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+	static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 public:
 	VulkanApplication(const std::string&, const std::string&, uint32_t, uint32_t);
 	~VulkanApplication();
