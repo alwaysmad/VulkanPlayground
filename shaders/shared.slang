@@ -32,7 +32,7 @@ float4x4 getViewProj(float4x4 c)
 
 	view[3].x = 0.0;
 	view[3].y = 0.0;
-	view[3].x = 0.0;
+	view[3].z = 0.0;
 	view[3].w = 1.0;
 
 	// Construct Proj

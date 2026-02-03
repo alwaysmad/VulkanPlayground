@@ -90,7 +90,7 @@ void VulkanApplication::updateSatellites(double time)
 		// 1. Position on sphere
 		// (Simple placeholder distribution)
 		const float theta = (float)i / count * glm::two_pi<float>();
-		const float phi = glm::half_pi<float>() * 0.2f; // 45 deg latitude
+		const float phi = glm::half_pi<float>() * 0.0f; // 45 deg latitude
 
 		const float r = 1.5f; // Altitude
 		const glm::vec3 pos(

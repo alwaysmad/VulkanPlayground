@@ -44,16 +44,16 @@ Renderer::~Renderer() { LOG_DEBUG("Renderer destroyed"); }
 void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 {
 	// Create Pool
-	vk::DescriptorPoolSize poolSize { vk::DescriptorType::eUniformBuffer, 1 };
-	vk::DescriptorPoolCreateInfo poolInfo {
+	static constexpr vk::DescriptorPoolSize poolSize { vk::DescriptorType::eUniformBuffer, 1 };
+	constexpr vk::DescriptorPoolCreateInfo poolInfo {
 		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 		.maxSets = 1, .poolSizeCount = 1, .pPoolSizes = &poolSize
 	};
 	m_descriptorPool = vk::raii::DescriptorPool(m_device.device(), poolInfo);
 
 	// Allocate Set (Using Satellite Pipeline Layout)
-	vk::DescriptorSetLayout dsl = *m_satellitePipeline.getDescriptorSetLayout();
-	vk::DescriptorSetAllocateInfo allocInfo {
+	const vk::DescriptorSetLayout dsl = *m_satellitePipeline.getDescriptorSetLayout();
+	const vk::DescriptorSetAllocateInfo allocInfo {
 		.descriptorPool = *m_descriptorPool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &dsl
@@ -61,12 +61,12 @@ void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 	m_satelliteDescriptors = vk::raii::DescriptorSets(m_device.device(), allocInfo);
 
 	// Update Set
-	vk::DescriptorBufferInfo bufInfo {
+	const vk::DescriptorBufferInfo bufInfo {
 		.buffer = *satNet.getBuffer(),
 		.offset = 0,
 		.range = satNet.getFrameSize()
 	};
-	vk::WriteDescriptorSet write {
+	const vk::WriteDescriptorSet write {
 		.dstSet = *m_satelliteDescriptors[0],
 		.dstBinding = 0, .descriptorCount = 1,
 		.descriptorType = vk::DescriptorType::eUniformBuffer,
@@ -237,7 +237,7 @@ void Renderer::draw(
 		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem
 	};
 
-	// COMMENT: Submit to queue.
+	// Submit to queue.
 	// - Waits on 'waitSems'
 	// - Signals 'renderSem'
 	// - Signals 'fence' when ALL work is done (for CPU sync)
@@ -349,14 +349,14 @@ void Renderer::recordCommands(
 
 	cmd.bindVertexBuffers(0, {*mesh.getVertexBuffer()}, {0});
 	cmd.bindIndexBuffer(*mesh.getIndexBuffer(), 0, vk::IndexType::eUint32);
-	cmd.drawIndexed(mesh.indices.size(), 1, 0, 0, 0);
+	cmd.drawIndexed(static_cast<uint32_t>(mesh.indices.size()), 1, 0, 0, 0);
 
 	// =========================================================================
 	// PASS 2: SATELLITES (Wireframes)
 	// =========================================================================
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
 	
-	// Satellite Shader expects "half4x4" at offset 0
+	// Satellite Shader expects "half4x4"
 	cmd.pushConstants<PackedHalfMat4>(*m_satellitePipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc.viewProj);
 
 	// Bind Descriptor Set (Satellite UBO)
