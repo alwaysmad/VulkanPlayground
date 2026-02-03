@@ -194,7 +194,7 @@ void Renderer::draw(
 
 	// 1. Acquire Image
 	// Waits for 'imgSem' to be signaled when the presentation engine releases an image
-	auto& imgSem = m_imageAvailableSemaphores[currentFrame];
+	const auto& imgSem = m_imageAvailableSemaphores[currentFrame];
 	uint32_t imageIndex;
 	try {
 		const auto result = m_device.device().acquireNextImage2KHR({
@@ -218,7 +218,7 @@ void Renderer::draw(
 
 	// 4. Submit
 	// Signals 'renderSem' when rendering finishes, so Present can start.
-	auto& renderSem = m_renderFinishedSemaphores[imageIndex];
+	vk::Semaphore renderSem = *m_renderFinishedSemaphores[imageIndex]; // extract handle
 
 	// Define stages statically (Fixed mapping: Index 0 = Color, Index 1 = Vertex)
 	constexpr std::array<vk::PipelineStageFlags, 2> waitStages = {
@@ -234,7 +234,7 @@ void Renderer::draw(
 		.pWaitSemaphores = waitSems.data(),
 		.pWaitDstStageMask = waitStages.data(),
 		.commandBufferCount = 1, .pCommandBuffers = &*cmd,
-		.signalSemaphoreCount = 1, .pSignalSemaphores = &*renderSem
+		.signalSemaphoreCount = 1, .pSignalSemaphores = &renderSem
 	};
 
 	// Submit to queue.
@@ -247,7 +247,7 @@ void Renderer::draw(
 	try {
 		const auto result = m_device.presentQueue().presentKHR({
 			// COMMENT: Wait for Rendering to finish before showing image
-			.waitSemaphoreCount = 1, .pWaitSemaphores = &*renderSem,
+			.waitSemaphoreCount = 1, .pWaitSemaphores = &renderSem,
 			.swapchainCount = 1, .pSwapchains = &*m_swapchain.getSwapchain(),
 			.pImageIndices = &imageIndex
 		});

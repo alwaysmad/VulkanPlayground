@@ -1,5 +1,9 @@
 #include "Computer.hpp"
 
+#include "VulkanDevice.hpp"
+#include "Satellite.hpp"
+#include "Mesh.hpp"
+
 Computer::Computer(const VulkanDevice& device) :
 	m_device(device),
 	// Use the Dedicated Compute Queue (faster on AMD/NVIDIA)

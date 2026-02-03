@@ -145,9 +145,9 @@ int VulkanApplication::run()
 		vulkanWindow.pollEvents();
 		vulkanWindow.updateFPS(appName);
 
-		auto& uploadSem = m_uploadFinishedSemaphores[currentFrame];
-		auto& computeSem = m_computeFinishedSemaphores[currentFrame];
-		auto& fence = m_inFlightFences[currentFrame];
+		const auto& uploadSem = m_uploadFinishedSemaphores[currentFrame];
+		const auto& computeSem = m_computeFinishedSemaphores[currentFrame];
+		const auto& fence = m_inFlightFences[currentFrame];
 
 		// Wait for CPU to be ready
 		if (vulkanDevice.device().waitForFences({*fence}, vk::True, UINT64_MAX) != vk::Result::eSuccess)

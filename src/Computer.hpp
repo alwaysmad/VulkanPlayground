@@ -1,10 +1,11 @@
 #pragma once
-#include "VulkanDevice.hpp"
 #include "VulkanCommand.hpp"
 #include "ComputePipeline.hpp"
-#include "Satellite.hpp"
-#include "Mesh.hpp"
 #include "PushConstants.hpp"
+
+class VulkanDevice;
+class Mesh;
+class SatelliteNetwork;
 
 class Computer
 {
@@ -12,11 +13,10 @@ public:
 	explicit Computer(const VulkanDevice& device);
 	~Computer();
 
-	// The main function. 
-	// - 'fence': Signaled when compute finishes (CPU Sync)
-	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync for Renderer)
-	void compute (
-			uint32_t currentFrame,
+	// The main function.
+	// - 'fence': Signaled when compute finishes (CPU Sync). Pass vk::Fence{} if not needed.
+	// - 'signalSemaphore': Signaled when compute finishes (GPU Sync). Pass vk::Semaphore{} if not needed.
+	void compute (  uint32_t currentFrame,
 			const glm::mat4& modelMatrix,
 			float deltaTime,
 			vk::Fence fence, 
