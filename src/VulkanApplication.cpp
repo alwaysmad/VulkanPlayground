@@ -80,7 +80,7 @@ void VulkanApplication::cursorPositionCallback(GLFWwindow* window, double xpos, 
 	app->m_camera.phi = std::max(epsilon, std::min(glm::pi<float>() - epsilon, app->m_camera.phi));
 }
 
-void VulkanApplication::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+void VulkanApplication::mouseButtonCallback(GLFWwindow* window, int button, int action, [[maybe_unused]] int mods)
 {
 	auto* app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
 
@@ -98,7 +98,7 @@ void VulkanApplication::mouseButtonCallback(GLFWwindow* window, int button, int 
 	}
 }
 
-void VulkanApplication::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+void VulkanApplication::scrollCallback(GLFWwindow* window, [[maybe_unused]] double xoffset, double yoffset)
 {
 	auto* app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
 

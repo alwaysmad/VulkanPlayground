@@ -46,15 +46,15 @@ public:
 
 	// 1. Dereference (*mem) returns the Underlying Handle (vk::DeviceMemory)
 	// This allows usage in Vulkan API calls: buffer.bindMemory(*mem, 0);
-	const vk::DeviceMemory& operator*() const { return *m_memory; }
+	inline const vk::DeviceMemory& operator*() const { return *m_memory; }
 
 	// 2. Arrow (mem->) returns the RAII Wrapper (vk::raii::DeviceMemory)
 	// This allows usage of RAII methods: mem->mapMemory(...);
-	vk::raii::DeviceMemory* operator->() { return &m_memory; }
-	const vk::raii::DeviceMemory* operator->() const { return &m_memory; }
+	inline vk::raii::DeviceMemory* operator->() { return &m_memory; }
+	inline const vk::raii::DeviceMemory* operator->() const { return &m_memory; }
 
 	// Accessor
-	const vk::raii::DeviceMemory& get() const { return m_memory; }
+	inline const vk::raii::DeviceMemory& get() const { return m_memory; }
 
 private:
 	vk::raii::DeviceMemory m_memory = nullptr;
