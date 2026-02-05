@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 # This ensures it's set before any other paths are initialized.
 set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps CACHE PATH "Base directory for FetchContent")
 
-project(SimpleVulkan LANGUAGES CXX)
+project(RemoteSensingOptimizer  LANGUAGES CXX)
 
 # --- Check for GCC 12+ ---
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
