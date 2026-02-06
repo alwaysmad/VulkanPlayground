@@ -1,11 +1,10 @@
 // src/main.cpp
-#include "core/Application.hpp"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
 	try
 	{
-		return Application::instance().run(); // returns EXIT_SUCCESS
+		return Application::instance().run(/* TODO pass args */); // returns EXIT_SUCCESS
 	}
 	catch ( const std::exception& e )
 	{

@@ -61,7 +61,9 @@ target_precompile_headers(rso PRIVATE
 	<glm/gtc/matrix_transform.hpp> # NEW: For lookAt/perspective
 
 	# Project Local
+	"core/Settings.hpp"
 	"core/Logger.hpp"
+	"core/Application.hpp"
 	#"Frames.hpp"
 )
 
