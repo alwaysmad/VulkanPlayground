@@ -19,23 +19,27 @@ public:
 	// 'the reign of the Emperor'
 	int run();
 
-	// Access Logger / Emperor's Herald
-	[[nodiscard]] inline const Logger& logger() { return m_logger; }
+	// Access console logger / Emperor's Herald
+	[[nodiscard]] inline const cLogger& Clogger() { return m_cLogger; }
 
 	// Access Settings / Emperor's rulebook
 	[[nodiscard]] inline const Settings& settings() { return m_settings; }
 
+	// Access file logger / Emperor's Scribe
+	[[nodiscard]] inline const fLogger& Flogger() { return *m_fLogger; }
+
 private:
-	Logger m_logger;
-	Settings m_settings;
+	// The privy council
+	cLogger m_cLogger; // Herald
+	Settings m_settings; // Rulebook
+
+	// The Imperial court
+	std::optional<fLogger> m_fLogger; // Scribe
+	// TODO more
+
+	void adjustSettings(/*TODO parse cli args*/);
 
 	// Private constructor, only instance() can create it
-	Application() : m_logger(), m_settings()
-	{
-		m_logger.cInfo("Application started");
-	}
-	~Application()
-	{
-		m_logger.cInfo("Application ended");
-	}
+	Application() { m_cLogger.info("Application started"); }
+	~Application() { m_cLogger.info("Application ended"); }
 };

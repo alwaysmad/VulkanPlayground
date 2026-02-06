@@ -6,7 +6,7 @@ struct Settings
 public:
 	// Emperor's rulebook
 	static constexpr std::string_view appName = "RSO";
-	static constexpr std::string_view logName = "rso.log";
+	std::string logPath = "rso.log";
 
 	Settings() noexcept = default;
 	~Settings() noexcept = default;

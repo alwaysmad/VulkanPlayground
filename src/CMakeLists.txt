@@ -41,7 +41,7 @@ target_precompile_headers(rso PRIVATE
 	<mutex>
 	<string_view>
 	<format>
-	<filesystem>
+	<optional>
 	#<cstdlib>
 	#<set>
 	#<fstream>
@@ -62,7 +62,8 @@ target_precompile_headers(rso PRIVATE
 
 	# Project Local
 	"core/Settings.hpp"
-	"core/Logger.hpp"
+	"core/ConsoleLogger.hpp"
+	"core/FileLogger.hpp"
 	"core/Application.hpp"
 	#"Frames.hpp"
 )
