@@ -35,11 +35,15 @@ target_precompile_headers(rso PRIVATE
 	# STL
 	#<vector>
 	#<array>
-	<iostream>
 	<stdexcept>
+	<fstream>
+	<iostream>
+	<mutex>
+	<string_view>
+	<format>
+	<filesystem>
 	#<cstdlib>
 	#<set>
-	<string>
 	#<fstream>
 	#<limits>
 	#<algorithm>
@@ -57,7 +61,7 @@ target_precompile_headers(rso PRIVATE
 	<glm/gtc/matrix_transform.hpp> # NEW: For lookAt/perspective
 
 	# Project Local
-	#"DebugOutput.hpp" # Works now because of step 4!
+	"core/Logger.hpp"
 	#"Frames.hpp"
 )
 

@@ -6,10 +6,10 @@ set(FETCHCONTENT_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/_deps CACHE PATH "Base dir
 
 project(RemoteSensingOptimizer  LANGUAGES CXX)
 
-# --- Check for GCC 12+ ---
+# --- Check for GCC 13+ ---
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
-		message(FATAL_ERROR "GCC version must be at least 12.0! Found: ${CMAKE_CXX_COMPILER_VERSION}. Please enable gcc-toolset-12.")
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
+		message(FATAL_ERROR "GCC version must be at least 13.0! Found: ${CMAKE_CXX_COMPILER_VERSION}. Please enable gcc-toolset-13.")
 	endif()
 endif()
 # -------------------------

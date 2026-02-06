@@ -1,6 +1,8 @@
 // src/core/Application.hpp
 #pragma once
 
+#include "Logger.hpp"
+
 class Application
 {
 	// 'Emperor' of the application
@@ -19,14 +21,19 @@ public:
 	// 'the reign of the Emperor'
 	int run();
 
+	// Access Logger / Emperor's Herald
+	inline Logger& logger() { return m_logger; }
+
 private:
+	Logger m_logger;
+
 	// Private constructor, only instance() can create it
-	Application()
+	Application() : m_logger()
 	{
-		// log
+		m_logger.cInfo("Application started");
 	}
 	~Application()
 	{
-		// log
+		m_logger.cInfo("Application ended");
 	}
 };
