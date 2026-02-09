@@ -7,17 +7,17 @@ class Application
 	// Is a singleton
 private:
 	// Passkey (THE CROWN)
-    // A permission slip that only 'Application' can sign.
+	// A permission slip that only 'Application' can sign.
 	// Only run() can crown an emperor
-    class PassKey {
-        friend class Application; // Only App can create this
-        private: explicit PassKey() = default;
-    };
+	class PassKey {
+		friend class Application; // Only App can create this
+		private: explicit PassKey() = default;
+	};
 
 	// The privy council
 	static std::optional<Application> s_instance; // The throne
-	Logger m_logger; // Herald and Scribe
 	Settings m_settings; // Rulebook
+	Logger m_logger; // Herald and Scribe
 
 	// The Imperial court
 	// TODO more
@@ -51,7 +51,7 @@ public:
 	}
 
 	// Access the instance / An audience
-	[[nodiscard]] inline static const std::optional<Application>& instance() { return s_instance; }
+	[[nodiscard]] inline static const std::optional<Application>& get() { return s_instance; }
 
 	// Access logger / Emperor's Herald and Scribe
 	[[nodiscard]] inline const Logger& logger() { return m_logger; }
