@@ -6,8 +6,8 @@ std::optional<Application> Application::s_instance;
 
 int Application::run(/*TODO parse cli args*/)
 {
-	// Crown a new emperor with a new rulebook
-	s_instance.emplace(adjustSettings(/*TODO args */));
+	// Crown a new emperor with a 'empty' crown and a new rulebook
+	s_instance.emplace(PassKey(), adjustSettings(/*TODO args */));
 
 	// Declare start of the reign
 	s_instance->m_logger.cInfo("Application name is {}", Settings::appName);
