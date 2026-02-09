@@ -4,25 +4,7 @@
 // Define the static Throne
 std::optional<Application> Application::s_instance;
 
-int Application::run(/*TODO parse cli args*/)
-{
-	// Crown a new emperor with a 'empty' crown and a new rulebook
-	s_instance.emplace(PassKey(), adjustSettings(/*TODO args */));
-
-	// Declare start of the reign
-	s_instance->m_logger.cInfo("Application name is {}", Settings::appName);
-
-	// test the file output
-	s_instance->m_logger.fInfo("blah blah in file");
-	
-	// end the reign gracefully
-	s_instance.reset();
-
-	// Report success to god
-	return EXIT_SUCCESS;
-}
-
-Settings Application::adjustSettings(/*TODO parse cli args*/)
+Settings Application::configure(/*TODO parse cli args*/)
 {
 	// Create rulebook
 	Settings s;
@@ -36,4 +18,15 @@ Settings Application::adjustSettings(/*TODO parse cli args*/)
 	s.logPath = std::filesystem::temp_directory_path() / ("rso.log");
 	
 	return s;
+}
+
+int Application::launch()
+{
+	// Declare start of the reign
+	m_logger.cInfo("Application name is {}", Settings::appName);
+
+	// test the file output
+	m_logger.fInfo("blah blah in file");
+
+	return EXIT_SUCCESS;
 }
