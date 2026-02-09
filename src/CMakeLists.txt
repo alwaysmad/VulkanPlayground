@@ -54,16 +54,15 @@ target_precompile_headers(rso PRIVATE
 	#<cassert>
 
 	# Third Party
-	<vulkan/vulkan_raii.hpp>
-	<GLFW/glfw3.h>
-	<glm/glm.hpp>
-	<glm/gtc/packing.hpp>
-	<glm/gtc/matrix_transform.hpp> # NEW: For lookAt/perspective
+	#<vulkan/vulkan_raii.hpp>
+	#<GLFW/glfw3.h>
+	#<glm/glm.hpp>
+	#<glm/gtc/packing.hpp>
+	#<glm/gtc/matrix_transform.hpp> # NEW: For lookAt/perspective
 
 	# Project Local
 	"core/Settings.hpp"
-	"core/ConsoleLogger.hpp"
-	"core/FileLogger.hpp"
+	"core/Logger.hpp"
 	"core/Application.hpp"
 	#"Frames.hpp"
 )

@@ -12,34 +12,31 @@ public:
 	Application& operator= (const Application&) = delete;
 	Application& operator= (Application&&) = delete;
 
-	// Meyers' Singleton
-	inline static Application& instance() { static Application app; return app; }
-	
 	// start the application
 	// 'the reign of the Emperor'
-	int run();
+	static int run(/*TODO args */);
 
-	// Access console logger / Emperor's Herald
-	[[nodiscard]] inline const cLogger& Clogger() { return m_cLogger; }
+	// Access the instace / An audience
+	[[nodiscard]] inline static const Application& instance() { return *s_instance; }
+
+	// Access logger / Emperor's Herald and Scribe
+	[[nodiscard]] inline const Logger& logger() { return m_logger; }
 
 	// Access Settings / Emperor's rulebook
 	[[nodiscard]] inline const Settings& settings() { return m_settings; }
 
-	// Access file logger / Emperor's Scribe
-	[[nodiscard]] inline const fLogger& Flogger() { return *m_fLogger; }
+	// Public so std::optional can create and destroy
+	Application(Settings&& s) : m_settings(std::move(s)), m_logger(m_settings.logPath) { m_logger.cInfo("Application started"); }
+	~Application() { m_logger.cInfo("Application ended"); }
 
 private:
 	// The privy council
-	cLogger m_cLogger; // Herald
+	static std::optional<Application> s_instance; // The throne
+	Logger m_logger; // Herald and Scribe
 	Settings m_settings; // Rulebook
 
 	// The Imperial court
-	std::optional<fLogger> m_fLogger; // Scribe
 	// TODO more
 
-	void adjustSettings(/*TODO parse cli args*/);
-
-	// Private constructor, only instance() can create it
-	Application() { m_cLogger.info("Application started"); }
-	~Application() { m_cLogger.info("Application ended"); }
+	static Settings adjustSettings(/*TODO parse cli args*/);
 };
