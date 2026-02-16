@@ -39,7 +39,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance& instance, const vk::raii::Surfa
 	
 	// Grab device with the provided name	
 	for (const auto& device : devices)
-		{ if ( device.getProperties().deviceName == deviceName ) m_physicalDevice = device; }
+		{ if ( device.getProperties().deviceName == deviceName.c_str() ) m_physicalDevice = device; }
 
 	// In debug build
 	if constexpr (enableValidationLayers)
