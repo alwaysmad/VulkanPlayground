@@ -15,13 +15,31 @@ class SatelliteNetwork;
 
 struct DrawTask {
 	vk::raii::CommandPool pool;
-	vk::raii::CommandBuffer cmd;
+	// Vector of buffers (one per frame in flight)
+	std::vector<vk::raii::CommandBuffer> cmds; 
 
 	DrawTask(const VulkanDevice& device, uint32_t queueFamily) :
-		pool(device.device(), { .flags = vk::CommandPoolCreateFlagBits::eTransient, .queueFamilyIndex = queueFamily }),
-		cmd(std::move(device.device().allocateCommandBuffers({ .commandPool = *pool, .level = vk::CommandBufferLevel::eSecondary, .commandBufferCount = 1 })[0]))
-	{}
+		pool(device.device(), { 
+			// FIX 1: Add eResetCommandBuffer
+			.flags = vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer, 
+			.queueFamilyIndex = queueFamily
+		})
+	{
+		// MAX_FRAMES_IN_FLIGHT buffers 
+		vk::CommandBufferAllocateInfo allocInfo {
+			.commandPool = *pool,
+			.level = vk::CommandBufferLevel::eSecondary,
+			.commandBufferCount = MAX_FRAMES_IN_FLIGHT
+		};
+		// allocateCommandBuffers returns a vector, so we just move it.
+		cmds = vk::raii::CommandBuffers(device.device(), allocInfo);
+	}
+
+	// Helper to get the current frame's buffer
+	const vk::raii::CommandBuffer& get(uint32_t frame) { return cmds[frame]; }
 };
+
+static constexpr vk::Extent2D INTERNAL_RES { 1920, 1080 };
 
 class Renderer
 {
@@ -65,8 +83,8 @@ private:
 	std::optional<DrawTask> m_satelliteTask;
 
 	// Recording functions for the modules
-	void bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view);
-	void bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view);
+	void bakeMeshTask(uint32_t, const Mesh&, const glm::mat4& model, const glm::mat4& view);
+	void bakeSatelliteTask(uint32_t, const SatelliteNetwork&, const glm::mat4& view);
 		
 	VulkanSwapchain m_swapchain;
 	void recreateSwapchain();
@@ -77,6 +95,15 @@ private:
 	vk::raii::ImageView m_depthView = nullptr;
 	vk::Format          m_depthFormat;
 	void createDepthBuffer();
+
+	// 2. The Virtual Canvas Resources
+	vk::raii::Image m_offscreenImage = nullptr;
+	TrackedDeviceMemory m_offscreenMemory;
+	vk::raii::ImageView m_offscreenView = nullptr;
+	// Standard format for internal rendering (Blit will handle conversion to Swapchain format)
+	vk::Format m_offscreenFormat = vk::Format::eR8G8B8A8Unorm; 
+
+	void createOffscreenResources();
 
 	// Pipelines
 	MeshPipeline m_meshPipeline;
@@ -94,7 +121,6 @@ private:
 	std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 	void remakeRenderFinishedSemaphores();
 	
-	void recordCommands(const vk::raii::CommandBuffer&, uint32_t, const Mesh&, const SatelliteNetwork&, const glm::mat4&, const glm::mat4&);
 	void submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore);
 
 	// Constants and default values

@@ -31,6 +31,7 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 	remakeRenderFinishedSemaphores();
 	
 	createDepthBuffer();
+	createOffscreenResources();
 
 	updateProjectionMatrix();
 
@@ -79,9 +80,43 @@ void Renderer::createDescriptors(const SatelliteNetwork& satNet)
 	m_device.device().updateDescriptorSets(write, nullptr);
 }
 
+void Renderer::createOffscreenResources()
+{
+	// 1. Create Image
+	const vk::ImageCreateInfo imageInfo {
+		.imageType = vk::ImageType::e2D,
+		.format = m_offscreenFormat,
+		.extent = { INTERNAL_RES.width, INTERNAL_RES.height, 1 },
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.samples = vk::SampleCountFlagBits::e1,
+		.tiling = vk::ImageTiling::eOptimal,
+		// Usage: Color Attachment (Draw) + Transfer Src (Blit)
+		.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc, 
+		.initialLayout = vk::ImageLayout::eUndefined
+	};
+
+	auto [img, mem] = m_device.createImage(imageInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	m_offscreenImage = std::move(img);
+	m_offscreenMemory = std::move(mem);
+
+	// 2. Create View
+	const vk::ImageViewCreateInfo viewInfo {
+		.image = *m_offscreenImage,
+		.viewType = vk::ImageViewType::e2D,
+		.format = m_offscreenFormat,
+		.subresourceRange = {
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1
+		}
+	};
+	m_offscreenView = vk::raii::ImageView(m_device.device(), viewInfo);
+}
+
 void Renderer::createDepthBuffer()
 {
-	const auto extent = m_swapchain.getExtent();
+	const auto extent = INTERNAL_RES;
 
 	const vk::ImageCreateInfo imageInfo {
 		.imageType = vk::ImageType::e2D,
@@ -130,13 +165,13 @@ void Renderer::recreateSwapchain()
 {
 	m_swapchain.recreate();
 	remakeRenderFinishedSemaphores();
-	createDepthBuffer();
-	updateProjectionMatrix();
+	//createDepthBuffer();
+	//updateProjectionMatrix();
 }
 
 void Renderer::updateProjectionMatrix()
 {
-	const auto extent = m_swapchain.getExtent();
+	const auto extent = INTERNAL_RES;
 	const auto min = static_cast<float>( std::min(extent.width, extent.height) );
 
 	// MANUAL PROJECTION MATRIX CONSTRUCTION
@@ -183,9 +218,9 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 }
 
 // --- NEW: Bake Mesh (Secondary) ---
-void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view)
+void Renderer::bakeMeshTask(uint32_t currentFrame, const Mesh& mesh, const glm::mat4& model, const glm::mat4& view)
 {
-	auto& cmd = m_meshTask->cmd;
+	auto& cmd = m_meshTask->get(currentFrame);
 
 	// 1. Define Dynamic Inheritance
 	// This tells the secondary buffer: "You will be rendering to these formats"
@@ -214,7 +249,7 @@ void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm:
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_meshPipeline.getPipeline());
 
 	// Viewport/Scissor (Must be set in secondary if dynamic)
-	const auto extent = m_swapchain.getExtent();
+	const auto extent = INTERNAL_RES;
 	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
 	cmd.setViewport(0, vp);
 	const vk::Rect2D scissor { .extent = extent };
@@ -233,9 +268,9 @@ void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm:
 }
 
 // --- NEW: Bake Satellite (Secondary) ---
-void Renderer::bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view)
+void Renderer::bakeSatelliteTask(uint32_t currentFrame, const SatelliteNetwork& satNet, const glm::mat4& view)
 {
-	auto& cmd = m_satelliteTask->cmd;
+	auto& cmd = m_satelliteTask->get(currentFrame);
 
 	const vk::Format colorFmt = m_swapchain.getImageFormat();
 	const vk::Format depthFmt = m_depthFormat;
@@ -258,7 +293,7 @@ void Renderer::bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
 
 	// Viewport/Scissor
-	const auto extent = m_swapchain.getExtent();
+	const auto extent = INTERNAL_RES;
 	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
 	cmd.setViewport(0, vp);
 	const vk::Rect2D scissor { .extent = extent };
@@ -315,8 +350,8 @@ void Renderer::draw(
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
 
 	// --- 1. Update Modules (Ideally done only when changed) ---
-	bakeMeshTask(mesh, modelMatrix, viewMatrix);
-	bakeSatelliteTask(satNet, viewMatrix);
+	bakeMeshTask(currentFrame, mesh, modelMatrix, viewMatrix);
+	bakeSatelliteTask(currentFrame, satNet, viewMatrix);
 
 	// --- 2. Record Primary (The Glue) ---
 	cmd.reset();
@@ -324,9 +359,9 @@ void Renderer::draw(
 
 	// --- BARRIERS ---
 	const vk::ImageMemoryBarrier2 barriers[] = { 
-		// Barrier: Undefined -> Color Attachment
+		// Barrier: Offscreen Undefined -> Color Attachment
 		{
-			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
 			.srcAccessMask = vk::AccessFlagBits2::eNone,
 			.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
 			.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -334,7 +369,7 @@ void Renderer::draw(
 			.newLayout = vk::ImageLayout::eColorAttachmentOptimal,
 			.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 			.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-			.image = swapchainImage,
+			.image = *m_offscreenImage,
 			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
 				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 		},
@@ -355,13 +390,12 @@ void Renderer::draw(
 	
 	// --- ATTACHMENTS ---
 	// Color Attachment
-	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
 	const vk::RenderingAttachmentInfo colorAttachment {
-		.imageView = swapchainImageView,
+		.imageView = *m_offscreenView,
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.loadOp = vk::AttachmentLoadOp::eClear,
 		.storeOp = vk::AttachmentStoreOp::eStore,
-		.clearValue = clearColor
+		.clearValue = { .color = { backgroundColor } }
 	};
 	// Depth Attachment
 	const vk::RenderingAttachmentInfo depthAttachment {
@@ -373,41 +407,103 @@ void Renderer::draw(
 	};
 	
 	const vk::RenderingInfo renderInfo {
-		.renderArea = { .extent = extent },
+		.flags = vk::RenderingFlagBits::eContentsSecondaryCommandBuffers,
+		.renderArea = { {0, 0}, INTERNAL_RES },
 		.layerCount = 1,
 		.colorAttachmentCount = 1,
 		.pColorAttachments = &colorAttachment,
 		.pDepthAttachment = &depthAttachment
-	};
+	};	
 	// --- 2. START RENDERING ---
 	cmd.beginRendering(renderInfo);
 
 	// --- EXECUTE MODULES ---
 	// This is the magic line.
-	cmd.executeCommands({ *m_meshTask->cmd, *m_satelliteTask->cmd });
-
+	cmd.executeCommands({ 
+		*m_meshTask->get(currentFrame), 
+		*m_satelliteTask->get(currentFrame) 
+	});
 	cmd.endRendering();
 
-	// --- BARRIER (PRESENT) ---
-	// Barrier: Color Attachment -> Present
-	const vk::ImageMemoryBarrier2 postRenderBarrier {
-		// We must wait for rendering to finish
-		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-		.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
-		
-		// BottomOfPipe is correct here: we just need to finish before the batch ends.
-		.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
-		.dstAccessMask = vk::AccessFlagBits2::eNone, 
-		
-		.oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
-		.newLayout = vk::ImageLayout::ePresentSrcKHR,
-		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, 
-			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+	// =========================================================================
+	// PHASE 2: BLIT TO SWAPCHAIN (LETTERBOXING)
+	// =========================================================================
+
+	// 1. Calculate Letterbox Dimensions
+	const float scaleX = (float)extent.width / INTERNAL_RES.width;
+	const float scaleY = (float)extent.height / INTERNAL_RES.height;
+	const float scale = std::min(scaleX, scaleY); // Maintain Aspect Ratio
+
+	const int32_t newW = (int32_t)(INTERNAL_RES.width * scale);
+	const int32_t newH = (int32_t)(INTERNAL_RES.height * scale);
+	const int32_t offsetX = ((int32_t)extent.width - newW) / 2;
+	const int32_t offsetY = ((int32_t)extent.height - newH) / 2;
+
+	// 2. Prepare Images for Transfer
+	vk::ImageMemoryBarrier2 transferBarriers[] = {
+		// Offscreen: ColorAttach -> TransferSrc
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+			.dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+			.dstAccessMask = vk::AccessFlagBits2::eTransferRead,
+			.oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+			.newLayout = vk::ImageLayout::eTransferSrcOptimal,
+			.image = *m_offscreenImage,
+			.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
+		},
+		// Swapchain: Undefined -> TransferDst
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
+			.srcAccessMask = vk::AccessFlagBits2::eNone,
+			.dstStageMask = vk::PipelineStageFlagBits2::eTransfer,
+			.dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
+			.oldLayout = vk::ImageLayout::eUndefined,
+			.newLayout = vk::ImageLayout::eTransferDstOptimal,
+			.image = m_swapchain.getImages()[imageIndex], // Actual Swapchain Handle
+			.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
+		}
 	};
-	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &postRenderBarrier });
+	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = transferBarriers });
+
+	// 3. Clear Swapchain to Black (The Bars)
+	constexpr std::array<float, 4> black {0.0f, 0.0f, 0.0f, 1.0f};
+	const vk::ClearColorValue clearColorBlack {  black };
+	vk::ImageSubresourceRange range { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+	cmd.clearColorImage(m_swapchain.getImages()[imageIndex], vk::ImageLayout::eTransferDstOptimal, clearColorBlack, range);
+
+	// 4. Blit the Canvas into the Center
+	const vk::ImageBlit blitRegion {
+		.srcSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1 },
+		.srcOffsets = { { {0,0,0}, {(int32_t)INTERNAL_RES.width, (int32_t)INTERNAL_RES.height, 1} } },
+		.dstSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1 },
+		.dstOffsets = { { 
+		    {offsetX, offsetY, 0}, 
+		    {offsetX + newW, offsetY + newH, 1} 
+		} }
+	};
+
+	cmd.blitImage(
+		*m_offscreenImage, vk::ImageLayout::eTransferSrcOptimal,
+		m_swapchain.getImages()[imageIndex], vk::ImageLayout::eTransferDstOptimal,
+		blitRegion,
+		vk::Filter::eLinear 
+	);
+
+	// =========================================================================
+	// PHASE 3: PRESENT TRANSITION
+	// =========================================================================
+	const vk::ImageMemoryBarrier2 presentBarrier {
+	.srcStageMask = vk::PipelineStageFlagBits2::eTransfer,
+	.srcAccessMask = vk::AccessFlagBits2::eTransferWrite,
+	.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
+	.dstAccessMask = vk::AccessFlagBits2::eNone,
+	.oldLayout = vk::ImageLayout::eTransferDstOptimal,
+	.newLayout = vk::ImageLayout::ePresentSrcKHR,
+	.image = m_swapchain.getImages()[imageIndex],
+	.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
+	};
+	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &presentBarrier });
 
 	cmd.end();
 
@@ -449,146 +545,4 @@ void Renderer::draw(
 		if (result == vk::Result::eSuboptimalKHR) { recreateSwapchain(); }
 	} catch (const vk::OutOfDateKHRError&)
 		{ recreateSwapchain(); }
-}
-
-void Renderer::recordCommands(
-		const vk::raii::CommandBuffer& cmd,
-		uint32_t imageIndex,
-		const Mesh& mesh,
-		const SatelliteNetwork& satNet,
-		const glm::mat4& modelMatrix,
-		const glm::mat4& viewMatrix )
-{
-	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
-	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
-	const auto extent = m_swapchain.getExtent();
-
-	cmd.reset();
-	cmd.begin({ .flags = {} });
-
-	// --- BARRIERS ---
-	const vk::ImageMemoryBarrier2 barriers[] = { 
-		// Barrier: Undefined -> Color Attachment
-		{
-			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-			.srcAccessMask = vk::AccessFlagBits2::eNone,
-			.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-			.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
-			.oldLayout = vk::ImageLayout::eUndefined,
-			.newLayout = vk::ImageLayout::eColorAttachmentOptimal,
-			.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-			.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-			.image = swapchainImage,
-			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
-				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
-		},
-		// DEPTH BARRIER (Undefined -> DepthAttachment)
-		{
-			.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-			.srcAccessMask = vk::AccessFlagBits2::eNone,
-			.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-			.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-			.oldLayout = vk::ImageLayout::eUndefined,
-			.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-			.image = *m_depthImage,
-			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
-				.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
-		}
-	};
-	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
-	
-	// --- ATTACHMENTS ---
-	// Color Attachment
-	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
-	const vk::RenderingAttachmentInfo colorAttachment {
-		.imageView = swapchainImageView,
-		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-		.loadOp = vk::AttachmentLoadOp::eClear,
-		.storeOp = vk::AttachmentStoreOp::eStore,
-		.clearValue = clearColor
-	};
-	// Depth Attachment
-	const vk::RenderingAttachmentInfo depthAttachment {
-		.imageView = *m_depthView,
-		.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-		.loadOp = vk::AttachmentLoadOp::eClear,
-		.storeOp = vk::AttachmentStoreOp::eStore,
-		.clearValue = vk::ClearValue{ .depthStencil = { 1.0f, 0 } } // Clear to 1.0 (Far)
-	};
-	
-	const vk::RenderingInfo renderInfo {
-		.renderArea = { .extent = extent },
-		.layerCount = 1,
-		.colorAttachmentCount = 1,
-		.pColorAttachments = &colorAttachment,
-		.pDepthAttachment = &depthAttachment
-	};
-	// --- 2. START RENDERING ---
-	cmd.beginRendering(renderInfo);
-
-	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
-	cmd.setViewport(0, vp);
-	const vk::Rect2D scissor { .extent = extent };
-	cmd.setScissor(0, scissor);
-
-	// =========================================================================
-	// PASS 1: EARTH MESH
-	// =========================================================================
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_meshPipeline.getPipeline());
-	
-	// --- Push camera and projection matrices ---
-	// Mesh Shader expects CameraPushConstants (PackedHalfMat4)
-	m_pc.viewProj = PackedHalfMat4(m_proj * viewMatrix);
-	m_pc.model = modelMatrix; 
-	cmd.pushConstants<CameraPushConstants>(*m_meshPipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc);
-
-	cmd.bindVertexBuffers(0, {*mesh.getVertexBuffer()}, {0});
-	cmd.bindIndexBuffer(*mesh.getIndexBuffer(), 0, vk::IndexType::eUint32);
-	cmd.drawIndexed(static_cast<uint32_t>(mesh.indices.size()), 1, 0, 0, 0);
-
-	// =========================================================================
-	// PASS 2: SATELLITES (Wireframes)
-	// =========================================================================
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
-	
-	// Satellite Shader expects "half4x4"
-	cmd.pushConstants<PackedHalfMat4>(*m_satellitePipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc.viewProj);
-
-	// Bind Descriptor Set (Satellite UBO)
-	cmd.bindDescriptorSets(
-		vk::PipelineBindPoint::eGraphics, 
-		*m_satellitePipeline.getLayout(), 
-		0, 
-		{*m_satelliteDescriptors[0]}, 
-		nullptr
-	);
-
-	// Draw using Vertex Pulling (no vertex buffers)
-	// 32 vertices per satellite (defined in shader kIndices)
-	cmd.draw(32, static_cast<uint32_t>(satNet.satellites.size()), 0, 0);
-
-	cmd.endRendering();
-
-	// --- BARRIER (PRESENT) ---
-	// Barrier: Color Attachment -> Present
-	const vk::ImageMemoryBarrier2 postRenderBarrier {
-		// We must wait for rendering to finish
-		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-		.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
-		
-		// BottomOfPipe is correct here: we just need to finish before the batch ends.
-		.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
-		.dstAccessMask = vk::AccessFlagBits2::eNone, 
-		
-		.oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
-		.newLayout = vk::ImageLayout::ePresentSrcKHR,
-		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.image = swapchainImage,
-		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, 
-			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
-	};
-	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &postRenderBarrier });
-
-	cmd.end();
 }
