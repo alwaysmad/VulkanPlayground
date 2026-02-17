@@ -36,6 +36,10 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 
 	createDescriptors(satNet);
 
+	// Initialize the Tasks
+	m_meshTask.emplace(device, device.getGraphicsQueueIndex());
+	m_satelliteTask.emplace(device, device.getGraphicsQueueIndex());
+
 	LOG_DEBUG("Renderer initialized");
 }
 
@@ -178,6 +182,99 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 	m_device.graphicsQueue().submit(submitInfo, fence);
 }
 
+// --- NEW: Bake Mesh (Secondary) ---
+void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view)
+{
+	auto& cmd = m_meshTask->cmd;
+
+	// 1. Define Dynamic Inheritance
+	// This tells the secondary buffer: "You will be rendering to these formats"
+	const vk::Format colorFmt = m_swapchain.getImageFormat();
+	const vk::Format depthFmt = m_depthFormat;
+
+	const vk::CommandBufferInheritanceRenderingInfo dynamicInheritance {
+		.colorAttachmentCount = 1,
+		.pColorAttachmentFormats = &colorFmt,
+		.depthAttachmentFormat = depthFmt,
+		.rasterizationSamples = vk::SampleCountFlagBits::e1
+	};
+
+	const vk::CommandBufferInheritanceInfo inheritInfo {
+		.pNext = &dynamicInheritance // <--- LINK HERE
+	};
+
+	// 2. Begin (Simultaneous Use allows resubmission if we were truly baked)
+	cmd.reset(); // Resetting because we update PushConstants every frame
+	cmd.begin({
+		.flags = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+		.pInheritanceInfo = &inheritInfo
+	});
+
+	// 3. Record Draw Commands
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_meshPipeline.getPipeline());
+
+	// Viewport/Scissor (Must be set in secondary if dynamic)
+	const auto extent = m_swapchain.getExtent();
+	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
+	cmd.setViewport(0, vp);
+	const vk::Rect2D scissor { .extent = extent };
+	cmd.setScissor(0, scissor);
+
+	// Push Constants
+	m_pc.viewProj = PackedHalfMat4(m_proj * view);
+	m_pc.model = model; 
+	cmd.pushConstants<CameraPushConstants>(*m_meshPipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc);
+
+	cmd.bindVertexBuffers(0, {*mesh.getVertexBuffer()}, {0});
+	cmd.bindIndexBuffer(*mesh.getIndexBuffer(), 0, vk::IndexType::eUint32);
+	cmd.drawIndexed(static_cast<uint32_t>(mesh.indices.size()), 1, 0, 0, 0);
+
+	cmd.end();
+}
+
+// --- NEW: Bake Satellite (Secondary) ---
+void Renderer::bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view)
+{
+	auto& cmd = m_satelliteTask->cmd;
+
+	const vk::Format colorFmt = m_swapchain.getImageFormat();
+	const vk::Format depthFmt = m_depthFormat;
+
+	const vk::CommandBufferInheritanceRenderingInfo dynamicInheritance {
+		.colorAttachmentCount = 1,
+		.pColorAttachmentFormats = &colorFmt,
+		.depthAttachmentFormat = depthFmt,
+		.rasterizationSamples = vk::SampleCountFlagBits::e1
+	};
+
+	const vk::CommandBufferInheritanceInfo inheritInfo { .pNext = &dynamicInheritance };
+
+	cmd.reset();
+	cmd.begin({
+		.flags = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+		.pInheritanceInfo = &inheritInfo
+	});
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getPipeline());
+
+	// Viewport/Scissor
+	const auto extent = m_swapchain.getExtent();
+	const vk::Viewport vp { .width = (float)extent.width, .height = (float)extent.height, .maxDepth = 1.0f };
+	cmd.setViewport(0, vp);
+	const vk::Rect2D scissor { .extent = extent };
+	cmd.setScissor(0, scissor);
+
+	// Push Constants
+	m_pc.viewProj = PackedHalfMat4(m_proj * view);
+	cmd.pushConstants<PackedHalfMat4>(*m_satellitePipeline.getLayout(), vk::ShaderStageFlagBits::eVertex, 0, m_pc.viewProj);
+
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_satellitePipeline.getLayout(), 0, {*m_satelliteDescriptors[0]}, nullptr);
+
+	cmd.draw(32, static_cast<uint32_t>(satNet.satellites.size()), 0, 0);
+
+	cmd.end();
+}
+
 void Renderer::draw(
 		const Mesh& mesh,
 		const SatelliteNetwork& satNet,
@@ -214,7 +311,105 @@ void Renderer::draw(
 
 	// 3. Record
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	recordCommands(cmd, imageIndex, mesh, satNet, modelMatrix, viewMatrix);
+	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
+	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
+
+	// --- 1. Update Modules (Ideally done only when changed) ---
+	bakeMeshTask(mesh, modelMatrix, viewMatrix);
+	bakeSatelliteTask(satNet, viewMatrix);
+
+	// --- 2. Record Primary (The Glue) ---
+	cmd.reset();
+	cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+
+	// --- BARRIERS ---
+	const vk::ImageMemoryBarrier2 barriers[] = { 
+		// Barrier: Undefined -> Color Attachment
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.srcAccessMask = vk::AccessFlagBits2::eNone,
+			.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+			.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+			.oldLayout = vk::ImageLayout::eUndefined,
+			.newLayout = vk::ImageLayout::eColorAttachmentOptimal,
+			.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+			.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+			.image = swapchainImage,
+			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+		},
+		// DEPTH BARRIER (Undefined -> DepthAttachment)
+		{
+			.srcStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+			.srcAccessMask = vk::AccessFlagBits2::eNone,
+			.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+			.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+			.oldLayout = vk::ImageLayout::eUndefined,
+			.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+			.image = *m_depthImage,
+			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
+				.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
+		}
+	};
+	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
+	
+	// --- ATTACHMENTS ---
+	// Color Attachment
+	constexpr vk::ClearValue clearColor { .color = { backgroundColor } };
+	const vk::RenderingAttachmentInfo colorAttachment {
+		.imageView = swapchainImageView,
+		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+		.loadOp = vk::AttachmentLoadOp::eClear,
+		.storeOp = vk::AttachmentStoreOp::eStore,
+		.clearValue = clearColor
+	};
+	// Depth Attachment
+	const vk::RenderingAttachmentInfo depthAttachment {
+		.imageView = *m_depthView,
+		.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+		.loadOp = vk::AttachmentLoadOp::eClear,
+		.storeOp = vk::AttachmentStoreOp::eStore,
+		.clearValue = vk::ClearValue{ .depthStencil = { 1.0f, 0 } } // Clear to 1.0 (Far)
+	};
+	
+	const vk::RenderingInfo renderInfo {
+		.renderArea = { .extent = extent },
+		.layerCount = 1,
+		.colorAttachmentCount = 1,
+		.pColorAttachments = &colorAttachment,
+		.pDepthAttachment = &depthAttachment
+	};
+	// --- 2. START RENDERING ---
+	cmd.beginRendering(renderInfo);
+
+	// --- EXECUTE MODULES ---
+	// This is the magic line.
+	cmd.executeCommands({ *m_meshTask->cmd, *m_satelliteTask->cmd });
+
+	cmd.endRendering();
+
+	// --- BARRIER (PRESENT) ---
+	// Barrier: Color Attachment -> Present
+	const vk::ImageMemoryBarrier2 postRenderBarrier {
+		// We must wait for rendering to finish
+		.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+		.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
+		
+		// BottomOfPipe is correct here: we just need to finish before the batch ends.
+		.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
+		.dstAccessMask = vk::AccessFlagBits2::eNone, 
+		
+		.oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
+		.newLayout = vk::ImageLayout::ePresentSrcKHR,
+		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
+		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
+		.image = swapchainImage,
+		.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eColor, 
+			.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
+	};
+	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &postRenderBarrier });
+
+	cmd.end();
 
 	// 4. Submit
 	// Signals 'renderSem' when rendering finishes, so Present can start.

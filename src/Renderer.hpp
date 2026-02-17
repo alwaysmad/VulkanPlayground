@@ -5,11 +5,23 @@
 
 #include "PushConstants.hpp"
 
+#include <optional>
+
 class VulkanDevice;
 class VulkanWindow;
 
 class Mesh;
 class SatelliteNetwork;
+
+struct DrawTask {
+	vk::raii::CommandPool pool;
+	vk::raii::CommandBuffer cmd;
+
+	DrawTask(const VulkanDevice& device, uint32_t queueFamily) :
+		pool(device.device(), { .flags = vk::CommandPoolCreateFlagBits::eTransient, .queueFamilyIndex = queueFamily }),
+		cmd(std::move(device.device().allocateCommandBuffers({ .commandPool = *pool, .level = vk::CommandBufferLevel::eSecondary, .commandBufferCount = 1 })[0]))
+	{}
+};
 
 class Renderer
 {
@@ -28,13 +40,13 @@ public:
 	// - waitSemaphore (Optional): 
 	//     If provided (not null), the Graphics Queue will wait for this semaphore 
 	//     (at Vertex Input stage) before processing. Used to sync Compute -> Graphics.
-	void draw(	const Mesh& mesh,
-			const SatelliteNetwork& satNet,
-			uint32_t currentFrame,
-			vk::Fence fence,
-			vk::Semaphore waitSemaphore = {},
-			const glm::mat4& ModelMatrix = defaultModel,
-			const glm::mat4& viewMatrix = defaultView );
+	void draw(const Mesh& mesh,
+		  const SatelliteNetwork& satNet,
+		  uint32_t currentFrame,
+		  vk::Fence fence,
+		  vk::Semaphore waitSemaphore = {},
+		  const glm::mat4& ModelMatrix = defaultModel,
+		  const glm::mat4& viewMatrix = defaultView );
 
 private:
 	// Push constant members and logic
@@ -44,8 +56,18 @@ private:
 
 	const VulkanDevice& m_device;
 
-	// Owned Resources
-	VulkanCommand   m_command;
+	// Main primary command
+	VulkanCommand m_command;
+
+	// --- NEW: The Modules ---
+	// These replace the monolithic recording logic
+	std::optional<DrawTask> m_meshTask;
+	std::optional<DrawTask> m_satelliteTask;
+
+	// Recording functions for the modules
+	void bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view);
+	void bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view);
+		
 	VulkanSwapchain m_swapchain;
 	void recreateSwapchain();
 
