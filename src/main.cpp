@@ -4,8 +4,8 @@ constexpr auto AppName = "SimpleVK";
 
 constexpr auto DeviceName = "Intel(R) Iris(R) Xe Graphics (ADL GT2)";
 
-static constexpr uint32_t WIDTH  = 800;
-static constexpr uint32_t HEIGHT = 600;
+static constexpr uint32_t WIDTH  = 1920;
+static constexpr uint32_t HEIGHT = 1080;
 
 int main(int argc, char** argv)
 {

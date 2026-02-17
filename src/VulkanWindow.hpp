@@ -11,6 +11,9 @@ public:
 		window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
 		if (!window) { throw std::runtime_error("Failed to create GLFW window"); }
 
+		// Forces the OS to maintain the requested ratio (e.g., 16:9) even when resizing or clamping.
+		glfwSetWindowAspectRatio(window, width, height);
+
 		VkSurfaceKHR _surface;
 		if (glfwCreateWindowSurface(*instance.getInstance(), window, nullptr, &_surface) != VK_SUCCESS)
 			{ throw std::runtime_error("Failed to create window surface"); }

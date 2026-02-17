@@ -39,7 +39,7 @@ struct DrawTask {
 	const vk::raii::CommandBuffer& get(uint32_t frame) { return cmds[frame]; }
 };
 
-static constexpr vk::Extent2D INTERNAL_RES { 1920, 1080 };
+static constexpr vk::Extent2D INTERNAL_RES { 3840, 2160 };
 
 class Renderer
 {
@@ -101,7 +101,7 @@ private:
 	TrackedDeviceMemory m_offscreenMemory;
 	vk::raii::ImageView m_offscreenView = nullptr;
 	// Standard format for internal rendering (Blit will handle conversion to Swapchain format)
-	vk::Format m_offscreenFormat = vk::Format::eR8G8B8A8Unorm; 
+	vk::Format m_offscreenFormat = vk::Format::eR8G8B8A8Srgb;
 
 	void createOffscreenResources();
 

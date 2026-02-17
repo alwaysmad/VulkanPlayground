@@ -17,8 +17,8 @@ Renderer::Renderer(const VulkanDevice& device, const VulkanWindow& window, const
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment )
 		),
 	// Create pipeline with that depth format
-	m_meshPipeline(device, m_swapchain.getImageFormat(), m_depthFormat),
-	m_satellitePipeline(device, m_swapchain.getImageFormat(), m_depthFormat)
+	m_meshPipeline(device, m_offscreenFormat, m_depthFormat),
+	m_satellitePipeline(device, m_offscreenFormat, m_depthFormat)
 {
 	// 1. Create Per-Frame Sync Objects (Image Available)
 	constexpr vk::SemaphoreCreateInfo semaphoreInfo{};
@@ -224,7 +224,7 @@ void Renderer::bakeMeshTask(uint32_t currentFrame, const Mesh& mesh, const glm::
 
 	// 1. Define Dynamic Inheritance
 	// This tells the secondary buffer: "You will be rendering to these formats"
-	const vk::Format colorFmt = m_swapchain.getImageFormat();
+	const vk::Format colorFmt = m_offscreenFormat;
 	const vk::Format depthFmt = m_depthFormat;
 
 	const vk::CommandBufferInheritanceRenderingInfo dynamicInheritance {
@@ -272,7 +272,7 @@ void Renderer::bakeSatelliteTask(uint32_t currentFrame, const SatelliteNetwork& 
 {
 	auto& cmd = m_satelliteTask->get(currentFrame);
 
-	const vk::Format colorFmt = m_swapchain.getImageFormat();
+	const vk::Format colorFmt = m_offscreenFormat;
 	const vk::Format depthFmt = m_depthFormat;
 
 	const vk::CommandBufferInheritanceRenderingInfo dynamicInheritance {
@@ -346,7 +346,8 @@ void Renderer::draw(
 
 	// 3. Record
 	const auto& cmd = m_command.getBuffer(currentFrame);
-	const auto& swapchainImageView = m_swapchain.getImageViews()[imageIndex];
+	
+	// FIX: Use these variables!
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
 
 	// --- 1. Update Modules (Ideally done only when changed) ---
@@ -460,7 +461,7 @@ void Renderer::draw(
 			.dstAccessMask = vk::AccessFlagBits2::eTransferWrite,
 			.oldLayout = vk::ImageLayout::eUndefined,
 			.newLayout = vk::ImageLayout::eTransferDstOptimal,
-			.image = m_swapchain.getImages()[imageIndex], // Actual Swapchain Handle
+			.image = swapchainImage, // <--- FIX: Used local variable
 			.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
 		}
 	};
@@ -470,22 +471,31 @@ void Renderer::draw(
 	constexpr std::array<float, 4> black {0.0f, 0.0f, 0.0f, 1.0f};
 	const vk::ClearColorValue clearColorBlack {  black };
 	vk::ImageSubresourceRange range { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-	cmd.clearColorImage(m_swapchain.getImages()[imageIndex], vk::ImageLayout::eTransferDstOptimal, clearColorBlack, range);
+	cmd.clearColorImage(swapchainImage, vk::ImageLayout::eTransferDstOptimal, clearColorBlack, range); // <--- FIX
 
 	// 4. Blit the Canvas into the Center
+	
+	// FIX: Define offsets explicitly to avoid brace elision confusion
+	const std::array<vk::Offset3D, 2> srcOffsets = { 
+		vk::Offset3D{0, 0, 0}, 
+		vk::Offset3D{(int32_t)INTERNAL_RES.width, (int32_t)INTERNAL_RES.height, 1} 
+	};
+	
+	const std::array<vk::Offset3D, 2> dstOffsets = { 
+		vk::Offset3D{offsetX, offsetY, 0}, 
+		vk::Offset3D{offsetX + newW, offsetY + newH, 1} 
+	};
+
 	const vk::ImageBlit blitRegion {
 		.srcSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1 },
-		.srcOffsets = { { {0,0,0}, {(int32_t)INTERNAL_RES.width, (int32_t)INTERNAL_RES.height, 1} } },
+		.srcOffsets = srcOffsets,
 		.dstSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1 },
-		.dstOffsets = { { 
-		    {offsetX, offsetY, 0}, 
-		    {offsetX + newW, offsetY + newH, 1} 
-		} }
+		.dstOffsets = dstOffsets
 	};
 
 	cmd.blitImage(
 		*m_offscreenImage, vk::ImageLayout::eTransferSrcOptimal,
-		m_swapchain.getImages()[imageIndex], vk::ImageLayout::eTransferDstOptimal,
+		swapchainImage, vk::ImageLayout::eTransferDstOptimal, // <--- FIX
 		blitRegion,
 		vk::Filter::eLinear 
 	);
@@ -500,7 +510,7 @@ void Renderer::draw(
 	.dstAccessMask = vk::AccessFlagBits2::eNone,
 	.oldLayout = vk::ImageLayout::eTransferDstOptimal,
 	.newLayout = vk::ImageLayout::ePresentSrcKHR,
-	.image = m_swapchain.getImages()[imageIndex],
+	.image = swapchainImage, // <--- FIX
 	.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 }
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &presentBarrier });
