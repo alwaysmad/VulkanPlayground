@@ -15,12 +15,28 @@ class SatelliteNetwork;
 
 struct DrawTask {
 	vk::raii::CommandPool pool;
-	vk::raii::CommandBuffer cmd;
+	// CHANGED: Now a vector of buffers (one per frame in flight)
+	std::vector<vk::raii::CommandBuffer> cmds; 
 
-	DrawTask(const VulkanDevice& device, uint32_t queueFamily) :
-		pool(device.device(), { .flags = vk::CommandPoolCreateFlagBits::eTransient, .queueFamilyIndex = queueFamily }),
-		cmd(std::move(device.device().allocateCommandBuffers({ .commandPool = *pool, .level = vk::CommandBufferLevel::eSecondary, .commandBufferCount = 1 })[0]))
-	{}
+	DrawTask(const VulkanDevice& device, uint32_t queueFamily) 
+	: pool(device.device(), { 
+		// FIX 1: Add eResetCommandBuffer
+		.flags = vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer, 
+		.queueFamilyIndex = queueFamily 
+	})
+	{
+		// FIX 3: Allocate 2 buffers (MAX_FRAMES_IN_FLIGHT)
+		vk::CommandBufferAllocateInfo allocInfo {
+		.commandPool = *pool,
+		.level = vk::CommandBufferLevel::eSecondary,
+		.commandBufferCount = MAX_FRAMES_IN_FLIGHT // <--- Important!
+		};
+		// allocateCommandBuffers returns a vector, so we just move it.
+		cmds = vk::raii::CommandBuffers(device.device(), allocInfo);
+	}
+
+	// Helper to get the current frame's buffer
+	const vk::raii::CommandBuffer& get(uint32_t frame) { return cmds[frame]; }
 };
 
 class Renderer
@@ -65,8 +81,8 @@ private:
 	std::optional<DrawTask> m_satelliteTask;
 
 	// Recording functions for the modules
-	void bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view);
-	void bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view);
+	void bakeMeshTask(uint32_t, const Mesh& mesh, const glm::mat4& model, const glm::mat4& view);
+	void bakeSatelliteTask(uint32_t, const SatelliteNetwork& satNet, const glm::mat4& view);
 		
 	VulkanSwapchain m_swapchain;
 	void recreateSwapchain();

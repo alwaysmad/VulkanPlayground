@@ -183,9 +183,9 @@ void Renderer::submitDummy(vk::Fence fence, vk::Semaphore waitSemaphore)
 }
 
 // --- NEW: Bake Mesh (Secondary) ---
-void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm::mat4& view)
+void Renderer::bakeMeshTask(uint32_t currentFrame, const Mesh& mesh, const glm::mat4& model, const glm::mat4& view)
 {
-	auto& cmd = m_meshTask->cmd;
+	auto& cmd = m_meshTask->get(currentFrame);
 
 	// 1. Define Dynamic Inheritance
 	// This tells the secondary buffer: "You will be rendering to these formats"
@@ -233,9 +233,9 @@ void Renderer::bakeMeshTask(const Mesh& mesh, const glm::mat4& model, const glm:
 }
 
 // --- NEW: Bake Satellite (Secondary) ---
-void Renderer::bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4& view)
+void Renderer::bakeSatelliteTask(uint32_t currentFrame, const SatelliteNetwork& satNet, const glm::mat4& view)
 {
-	auto& cmd = m_satelliteTask->cmd;
+	auto& cmd = m_satelliteTask->get(currentFrame);
 
 	const vk::Format colorFmt = m_swapchain.getImageFormat();
 	const vk::Format depthFmt = m_depthFormat;
@@ -275,14 +275,13 @@ void Renderer::bakeSatelliteTask(const SatelliteNetwork& satNet, const glm::mat4
 	cmd.end();
 }
 
-void Renderer::draw(
-		const Mesh& mesh,
-		const SatelliteNetwork& satNet,
-		uint32_t currentFrame,
-		vk::Fence fence,
-		vk::Semaphore waitSemaphore,
-		const glm::mat4& modelMatrix,
-		const glm::mat4& viewMatrix )
+void Renderer::draw( const Mesh& mesh,
+		     const SatelliteNetwork& satNet,
+		     uint32_t currentFrame,
+		     vk::Fence fence,
+		     vk::Semaphore waitSemaphore,
+		     const glm::mat4& modelMatrix,
+		     const glm::mat4& viewMatrix )
 {
 	// 0. Check for Minimization
 	const auto extent = m_swapchain.getExtent();
@@ -315,8 +314,8 @@ void Renderer::draw(
 	const auto& swapchainImage = m_swapchain.getImages()[imageIndex];
 
 	// --- 1. Update Modules (Ideally done only when changed) ---
-	bakeMeshTask(mesh, modelMatrix, viewMatrix);
-	bakeSatelliteTask(satNet, viewMatrix);
+	bakeMeshTask(currentFrame, mesh, modelMatrix, viewMatrix);
+	bakeSatelliteTask(currentFrame, satNet, viewMatrix);
 
 	// --- 2. Record Primary (The Glue) ---
 	cmd.reset();
@@ -348,7 +347,7 @@ void Renderer::draw(
 			.newLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 			.image = *m_depthImage,
 			.subresourceRange = { .aspectMask = vk::ImageAspectFlagBits::eDepth,
-				.baseMipLevel=0, .levelCount=1, .baseArrayLayer=0, .layerCount=1 }
+				.baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }
 		}
 	};
 	cmd.pipelineBarrier2({ .imageMemoryBarrierCount = 2, .pImageMemoryBarriers = barriers });
@@ -373,18 +372,23 @@ void Renderer::draw(
 	};
 	
 	const vk::RenderingInfo renderInfo {
+		.flags = vk::RenderingFlagBits::eContentsSecondaryCommandBuffers, // <--- CRITICAL FIX
 		.renderArea = { .extent = extent },
 		.layerCount = 1,
 		.colorAttachmentCount = 1,
 		.pColorAttachments = &colorAttachment,
 		.pDepthAttachment = &depthAttachment
 	};
+
 	// --- 2. START RENDERING ---
 	cmd.beginRendering(renderInfo);
 
 	// --- EXECUTE MODULES ---
 	// This is the magic line.
-	cmd.executeCommands({ *m_meshTask->cmd, *m_satelliteTask->cmd });
+	cmd.executeCommands({ 
+		*m_meshTask->get(currentFrame), 
+		*m_satelliteTask->get(currentFrame) 
+	});
 
 	cmd.endRendering();
 
